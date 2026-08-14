@@ -5,10 +5,12 @@ from decimal import Decimal
 from enum import StrEnum
 
 from .contracts import Fill, Order, Side
+from .ledger import AccountSnapshot, TradingLedger
 from .orderbook import PriceTimeOrderBook
 
 
 class EventType(StrEnum):
+    PARTICIPANT_REGISTERED = "participant.registered"
     ORDER_ACCEPTED = "order.accepted"
     ORDER_CANCELLED = "order.cancelled"
     FILL_CREATED = "fill.created"
@@ -47,11 +49,27 @@ class EventLog:
 class TradingSession:
     """Command boundary that records every accepted exchange state change."""
 
-    def __init__(self, symbol: str, tick_size: Decimal = Decimal("0.01")) -> None:
+    def __init__(
+        self,
+        symbol: str,
+        tick_size: Decimal = Decimal("0.01"),
+        contract_multiplier: int = 100,
+    ) -> None:
         self.symbol = symbol
         self.tick_size = tick_size
         self.book = PriceTimeOrderBook(symbol, tick_size)
         self.log = EventLog()
+        self.ledger = TradingLedger(contract_multiplier)
+
+    def register_participant(
+        self, participant_id: str, starting_cash: Decimal = Decimal("0")
+    ) -> None:
+        self.ledger.register(participant_id, starting_cash)
+        self.log.append(
+            EventType.PARTICIPANT_REGISTERED,
+            participant_id=participant_id,
+            starting_cash=starting_cash,
+        )
 
     def submit_order(
         self,
@@ -78,6 +96,7 @@ class TradingSession:
             quantity=quantity,
         )
         for fill in fills:
+            self.ledger.apply_fill(fill)
             self.log.append(
                 EventType.FILL_CREATED,
                 fill_id=fill.fill_id,
@@ -97,6 +116,9 @@ class TradingSession:
     def active_orders(self) -> tuple[Order, ...]:
         return self.book.active_orders()
 
+    def account(self, participant_id: str, option_mark: Decimal) -> AccountSnapshot:
+        return self.ledger.snapshot(participant_id, option_mark)
+
     @classmethod
     def replay(
         cls,
@@ -104,15 +126,20 @@ class TradingSession:
         symbol: str,
         events: tuple[SessionEvent, ...],
         tick_size: Decimal = Decimal("0.01"),
+        contract_multiplier: int = 100,
     ) -> TradingSession:
-        session = cls(symbol, tick_size)
+        session = cls(symbol, tick_size, contract_multiplier)
         expected_sequence = 1
         for event in events:
             if event.sequence != expected_sequence:
                 raise ValueError("event sequence must be contiguous")
             expected_sequence += 1
             data = event.data()
-            if event.event_type is EventType.ORDER_ACCEPTED:
+            if event.event_type is EventType.PARTICIPANT_REGISTERED:
+                session.register_participant(
+                    data["participant_id"], Decimal(data["starting_cash"])
+                )
+            elif event.event_type is EventType.ORDER_ACCEPTED:
                 session.submit_order(
                     order_id=data["order_id"],
                     participant_id=data["participant_id"],
