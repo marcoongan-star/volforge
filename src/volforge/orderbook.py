@@ -88,6 +88,14 @@ class PriceTimeOrderBook:
         order = self._orders.get(order_id)
         return order if order is not None and order.remaining else None
 
+    def active_orders(self) -> tuple[Order, ...]:
+        """Return a stable read model without exposing the book's internal queues."""
+        return tuple(
+            order
+            for order in sorted(self._orders.values(), key=lambda item: item.sequence)
+            if order.remaining
+        )
+
     def _best_crossing_order(self, incoming: Order) -> Order | None:
         opposing = Side.SELL if incoming.side is Side.BUY else Side.BUY
         prices = [price for price, queue in self._levels[opposing].items() if queue]
@@ -107,4 +115,3 @@ class PriceTimeOrderBook:
             return
         if not queue:
             del self._levels[order.side][order.price]
-
