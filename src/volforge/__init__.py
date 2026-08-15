@@ -1,6 +1,14 @@
 """VolForge quantitative exchange core."""
 
 from .contracts import Fill, OptionContract, OptionType, Order, Side
+from .decisions import (
+    ActionAnalysis,
+    DecisionReview,
+    EarningsOutcome,
+    TradeAction,
+    analyze_earnings_actions,
+    review_decision,
+)
 from .ledger import AccountSnapshot, TradingLedger
 from .orderbook import PriceTimeOrderBook
 from .pricing import OptionMetrics, black_scholes
@@ -10,6 +18,9 @@ from .session import EventLog, EventType, SessionEvent, TradingSession
 
 __all__ = [
     "EarningsScenario",
+    "EarningsOutcome",
+    "ActionAnalysis",
+    "DecisionReview",
     "AccountSnapshot",
     "EventLog",
     "EventType",
@@ -25,6 +36,9 @@ __all__ = [
     "SessionEvent",
     "TradingSession",
     "TradingLedger",
+    "TradeAction",
+    "analyze_earnings_actions",
     "black_scholes",
     "limits_for",
+    "review_decision",
 ]
