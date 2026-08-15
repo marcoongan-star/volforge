@@ -10,6 +10,7 @@ from .decisions import (
     review_decision,
 )
 from .ledger import AccountSnapshot, TradingLedger
+from .experiments import ExperimentResult, run_long_straddle_experiment
 from .orderbook import PriceTimeOrderBook
 from .pricing import OptionMetrics, black_scholes
 from .risk import RiskLimits, RiskPreset, limits_for
@@ -24,6 +25,7 @@ __all__ = [
     "AccountSnapshot",
     "EventLog",
     "EventType",
+    "ExperimentResult",
     "Fill",
     "OptionContract",
     "OptionMetrics",
@@ -41,4 +43,5 @@ __all__ = [
     "black_scholes",
     "limits_for",
     "review_decision",
+    "run_long_straddle_experiment",
 ]

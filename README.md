@@ -15,8 +15,11 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Deterministic replay that rebuilds the order book and verifies the regenerated event stream.
 - Fill accounting for participant cash and option inventory.
 - Mark-to-market equity and P&L using an explicit option mark and contract multiplier.
+- Discrete earnings beliefs with expected-value comparison of buying, selling, or staying flat.
+- Decision review that measures opportunity cost against the best action under stated beliefs.
+- Reproducible long-straddle experiments with dispersion, standard error, and 95% confidence intervals.
 
-The current test suite has twelve checks. All example markets are synthetic and explicitly seeded.
+The current test suite has eighteen checks. All example markets are synthetic and explicitly seeded.
 
 ## Planned stack
 
@@ -44,10 +47,12 @@ python3 -m venv .venv
 | `src/volforge/ledger.py` | Cash, inventory, equity, and marked P&L |
 | `src/volforge/scenario.py` | Seeded earnings price paths |
 | `src/volforge/risk.py` | Cautious, balanced, and aggressive limits |
+| `src/volforge/decisions.py` | Probability-weighted earnings decisions and benchmark review |
+| `src/volforge/experiments.py` | Repeatable strategy experiments and uncertainty estimates |
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_ledger.py` to see the Day 3 accounting feature in the smallest readable form. See [Milestone 2](docs/milestone-2.md) for replay and [Milestone 3](docs/milestone-3.md) for the ledger data flow.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, and [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments.
 
 ## Next milestones
 
