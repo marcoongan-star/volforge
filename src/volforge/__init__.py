@@ -3,11 +3,16 @@
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
     ActionAnalysis,
+    DecisionScorecard,
     DecisionReview,
     EarningsOutcome,
+    RiskAdjustedAction,
     TradeAction,
     analyze_earnings_actions,
     review_decision,
+    risk_aversion_for,
+    score_decision,
+    score_decision_for_preset,
 )
 from .ledger import AccountSnapshot, TradingLedger
 from .experiments import ExperimentResult, run_long_straddle_experiment
@@ -22,6 +27,7 @@ __all__ = [
     "EarningsOutcome",
     "ActionAnalysis",
     "DecisionReview",
+    "DecisionScorecard",
     "AccountSnapshot",
     "EventLog",
     "EventType",
@@ -33,6 +39,7 @@ __all__ = [
     "Order",
     "PriceTimeOrderBook",
     "RiskLimits",
+    "RiskAdjustedAction",
     "RiskPreset",
     "Side",
     "SessionEvent",
@@ -43,5 +50,8 @@ __all__ = [
     "black_scholes",
     "limits_for",
     "review_decision",
+    "risk_aversion_for",
+    "score_decision",
+    "score_decision_for_preset",
     "run_long_straddle_experiment",
 ]

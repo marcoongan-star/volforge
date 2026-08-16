@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from enum import StrEnum
 
+from .risk import RiskPreset
+
 
 CENT = Decimal("0.01")
 
@@ -49,6 +51,30 @@ class DecisionReview:
     @property
     def is_expected_value_optimal(self) -> bool:
         return self.opportunity_cost == 0
+
+
+@dataclass(frozen=True)
+class RiskAdjustedAction:
+    analysis: ActionAnalysis
+    risk_penalty: Decimal
+    risk_adjusted_score: Decimal
+
+
+@dataclass(frozen=True)
+class DecisionScorecard:
+    chosen: RiskAdjustedAction
+    expected_value_benchmark: ActionAnalysis
+    risk_adjusted_benchmark: RiskAdjustedAction
+    expected_value_opportunity_cost: Decimal
+    risk_adjusted_opportunity_cost: Decimal
+    risk_aversion: Decimal
+
+
+_PRESET_RISK_AVERSION = {
+    RiskPreset.CAUTIOUS: Decimal("0.75"),
+    RiskPreset.BALANCED: Decimal("0.35"),
+    RiskPreset.AGGRESSIVE: Decimal("0.10"),
+}
 
 
 def _validate_inputs(
@@ -157,4 +183,62 @@ def review_decision(
         chosen=chosen,
         benchmark=benchmark,
         opportunity_cost=benchmark.expected_pnl - chosen.expected_pnl,
+    )
+
+
+def risk_aversion_for(preset: RiskPreset) -> Decimal:
+    return _PRESET_RISK_AVERSION[preset]
+
+
+def score_decision(
+    analyses: tuple[ActionAnalysis, ...],
+    chosen_action: TradeAction,
+    *,
+    risk_aversion: Decimal,
+) -> DecisionScorecard:
+    """Show expected-value and mean-minus-risk benchmarks side by side."""
+    if risk_aversion < 0:
+        raise ValueError("risk_aversion cannot be negative")
+    expected_review = review_decision(analyses, chosen_action)
+    scored = tuple(
+        RiskAdjustedAction(
+            analysis=analysis,
+            risk_penalty=(risk_aversion * analysis.pnl_standard_deviation).quantize(
+                CENT, rounding=ROUND_HALF_UP
+            ),
+            risk_adjusted_score=(
+                analysis.expected_pnl - risk_aversion * analysis.pnl_standard_deviation
+            ).quantize(CENT, rounding=ROUND_HALF_UP),
+        )
+        for analysis in analyses
+    )
+    by_action = {item.analysis.action: item for item in scored}
+    benchmark = max(
+        scored,
+        key=lambda item: (
+            item.risk_adjusted_score,
+            item.analysis.action is TradeAction.STAY_FLAT,
+        ),
+    )
+    chosen = by_action[chosen_action]
+    return DecisionScorecard(
+        chosen=chosen,
+        expected_value_benchmark=expected_review.benchmark,
+        risk_adjusted_benchmark=benchmark,
+        expected_value_opportunity_cost=expected_review.opportunity_cost,
+        risk_adjusted_opportunity_cost=benchmark.risk_adjusted_score
+        - chosen.risk_adjusted_score,
+        risk_aversion=risk_aversion,
+    )
+
+
+def score_decision_for_preset(
+    analyses: tuple[ActionAnalysis, ...],
+    chosen_action: TradeAction,
+    preset: RiskPreset,
+) -> DecisionScorecard:
+    return score_decision(
+        analyses,
+        chosen_action,
+        risk_aversion=risk_aversion_for(preset),
     )

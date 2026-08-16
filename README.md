@@ -17,9 +17,10 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Mark-to-market equity and P&L using an explicit option mark and contract multiplier.
 - Discrete earnings beliefs with expected-value comparison of buying, selling, or staying flat.
 - Decision review that measures opportunity cost against the best action under stated beliefs.
+- Side-by-side expected-value and risk-adjusted benchmarks using payoff dispersion.
 - Reproducible long-straddle experiments with dispersion, standard error, and 95% confidence intervals.
 
-The current test suite has eighteen checks. All example markets are synthetic and explicitly seeded.
+The current test suite has twenty-one checks. All example markets are synthetic and explicitly seeded.
 
 ## Planned stack
 
@@ -52,7 +53,7 @@ python3 -m venv .venv
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, and [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, and [Milestone 5](docs/milestone-5.md) for dual decision benchmarks.
 
 ## Next milestones
 

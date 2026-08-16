@@ -4,9 +4,12 @@ import pytest
 
 from volforge import (
     EarningsOutcome,
+    RiskPreset,
     TradeAction,
     analyze_earnings_actions,
     review_decision,
+    score_decision,
+    score_decision_for_preset,
 )
 
 
@@ -51,4 +54,41 @@ def test_probabilities_must_describe_a_complete_distribution() -> None:
             spot=Decimal("100"),
             strike=Decimal("100"),
             premium=Decimal("5"),
+        )
+
+
+def test_expected_value_and_cautious_benchmarks_can_disagree() -> None:
+    analyses = analyze_earnings_actions(
+        beliefs(), spot=Decimal("100"), strike=Decimal("100"), premium=Decimal("5")
+    )
+    scorecard = score_decision_for_preset(
+        analyses, TradeAction.BUY_CALL, RiskPreset.CAUTIOUS
+    )
+
+    assert scorecard.expected_value_benchmark.action is TradeAction.BUY_CALL
+    assert scorecard.risk_adjusted_benchmark.analysis.action is TradeAction.STAY_FLAT
+    assert scorecard.expected_value_opportunity_cost == Decimal("0.00")
+    assert scorecard.risk_adjusted_opportunity_cost > 0
+
+
+def test_aggressive_preset_accepts_dispersion_for_expected_return() -> None:
+    analyses = analyze_earnings_actions(
+        beliefs(), spot=Decimal("100"), strike=Decimal("100"), premium=Decimal("5")
+    )
+    scorecard = score_decision_for_preset(
+        analyses, TradeAction.BUY_CALL, RiskPreset.AGGRESSIVE
+    )
+    assert scorecard.risk_adjusted_benchmark.analysis.action is TradeAction.BUY_CALL
+    assert scorecard.chosen.risk_adjusted_score == Decimal("602.02")
+
+
+def test_risk_aversion_cannot_reward_more_risk() -> None:
+    analyses = analyze_earnings_actions(
+        beliefs(), spot=Decimal("100"), strike=Decimal("100"), premium=Decimal("5")
+    )
+    with pytest.raises(ValueError, match="cannot be negative"):
+        score_decision(
+            analyses,
+            TradeAction.BUY_CALL,
+            risk_aversion=Decimal("-0.1"),
         )
