@@ -24,10 +24,12 @@ def test_expected_value_is_probability_weighted_not_win_rate() -> None:
     calls = {analysis.action: analysis for analysis in analyses}
 
     assert calls[TradeAction.BUY_CALL].expected_pnl == Decimal("700.00")
+    assert calls[TradeAction.BUY_CALL].pnl_standard_deviation == Decimal("979.80")
     assert calls[TradeAction.BUY_CALL].probability_of_profit == Decimal("0.60")
     assert calls[TradeAction.BUY_CALL].worst_case_pnl == Decimal("-500.00")
     assert calls[TradeAction.SELL_CALL].expected_pnl == Decimal("-700.00")
     assert calls[TradeAction.STAY_FLAT].expected_pnl == Decimal("0.00")
+    assert calls[TradeAction.STAY_FLAT].pnl_standard_deviation == Decimal("0.00")
 
 
 def test_review_separates_decision_quality_from_realized_outcome() -> None:

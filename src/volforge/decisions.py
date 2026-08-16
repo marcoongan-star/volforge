@@ -33,6 +33,7 @@ class EarningsOutcome:
 class ActionAnalysis:
     action: TradeAction
     expected_pnl: Decimal
+    pnl_standard_deviation: Decimal
     best_case_pnl: Decimal
     worst_case_pnl: Decimal
     probability_of_profit: Decimal
@@ -112,10 +113,22 @@ def analyze_earnings_actions(
                 probability_of_profit += outcome.probability
 
         pnl_values = [pnl for _, pnl in outcome_pnls]
+        pnl_variance = sum(
+            (
+                outcome.probability
+                * (pnl - expected_pnl)
+                * (pnl - expected_pnl)
+                for outcome, (_, pnl) in zip(outcomes, outcome_pnls, strict=True)
+            ),
+            start=Decimal("0"),
+        )
         analyses.append(
             ActionAnalysis(
                 action=action,
                 expected_pnl=expected_pnl.quantize(CENT, rounding=ROUND_HALF_UP),
+                pnl_standard_deviation=pnl_variance.sqrt().quantize(
+                    CENT, rounding=ROUND_HALF_UP
+                ),
                 best_case_pnl=max(pnl_values),
                 worst_case_pnl=min(pnl_values),
                 probability_of_profit=probability_of_profit,
