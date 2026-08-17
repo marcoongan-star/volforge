@@ -27,7 +27,7 @@ class SessionEvent:
 
 
 class EventLog:
-    """Append-only in-memory log; PostgreSQL persistence arrives with the API milestone."""
+    """Append-only domain log; a storage adapter persists accepted events."""
 
     def __init__(self) -> None:
         self._events: list[SessionEvent] = []

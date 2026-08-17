@@ -19,13 +19,15 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Decision review that measures opportunity cost against the best action under stated beliefs.
 - Side-by-side expected-value and risk-adjusted benchmarks using payoff dispersion.
 - Reproducible long-straddle experiments with dispersion, standard error, and 95% confidence intervals.
+- SQLite-backed append-only session storage with deterministic restart recovery.
+- A hybrid FastAPI boundary: stateless earnings analysis plus durable exchange commands.
 
-The current test suite has twenty-one checks. All example markets are synthetic and explicitly seeded.
+All example markets are synthetic and explicitly seeded.
 
 ## Planned stack
 
 - Python 3.12 for the exchange, pricing, risk and agents.
-- FastAPI and WebSockets for commands and live events.
+- FastAPI for commands and analysis; WebSockets are the next live-event boundary.
 - React and TypeScript for the learning-lab interface.
 - PostgreSQL for sessions and the append-only event log.
 - pytest, Docker and GitHub Actions for repeatable validation.
@@ -50,14 +52,15 @@ python3 -m venv .venv
 | `src/volforge/risk.py` | Cautious, balanced, and aggressive limits |
 | `src/volforge/decisions.py` | Probability-weighted earnings decisions and benchmark review |
 | `src/volforge/experiments.py` | Repeatable strategy experiments and uncertainty estimates |
+| `src/volforge/store.py` | SQLite session metadata and append-only events |
+| `src/volforge/api.py` | Stateless analysis and stateful exchange HTTP boundaries |
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, and [Milestone 5](docs/milestone-5.md) for dual decision benchmarks.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, and [Milestone 6](docs/milestone-6.md) for the hybrid API.
 
 ## Next milestones
 
-1. Persist sessions and expose commands through FastAPI.
-2. Add stock inventory, delta hedging, fees, and P&L attribution.
-3. Add switchable market-maker and directional agents.
-4. Stream the learning lab through WebSockets and a React interface.
+1. Add stock inventory, delta hedging, fees, and P&L attribution.
+2. Add switchable market-maker and directional agents.
+3. Stream the learning lab through WebSockets and a React interface.
