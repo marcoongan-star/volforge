@@ -21,6 +21,7 @@ from .pricing import OptionMetrics, black_scholes
 from .risk import RiskLimits, RiskPreset, limits_for
 from .scenario import EarningsScenario
 from .session import EventLog, EventType, SessionEvent, TradingSession
+from .store import SqliteSessionStore, StoredSession
 
 __all__ = [
     "EarningsScenario",
@@ -43,6 +44,8 @@ __all__ = [
     "RiskPreset",
     "Side",
     "SessionEvent",
+    "SqliteSessionStore",
+    "StoredSession",
     "TradingSession",
     "TradingLedger",
     "TradeAction",
