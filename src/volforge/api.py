@@ -19,6 +19,7 @@ from .decisions import (
 )
 from .risk import RiskPreset
 from .ledger import AccountSnapshot
+from .market_maker import quote_for_preset
 from .session import TradingSession
 from .store import SqliteSessionStore
 
@@ -69,6 +70,17 @@ class HedgeInput(BaseModel):
     stock_price: PositiveDecimal
     per_share_fee: Decimal = Field(default=Decimal("0"), ge=0)
     fixed_fee: Decimal = Field(default=Decimal("0"), ge=0)
+
+
+class MarketMakerQuoteInput(BaseModel):
+    theoretical_price: PositiveDecimal
+    option_inventory: int
+    risk_preset: RiskPreset = RiskPreset.BALANCED
+    tick_size: PositiveDecimal = Decimal("0.01")
+    base_half_spread: Decimal = Field(default=Decimal("0.05"), ge=0)
+    max_inventory_skew: Decimal = Field(default=Decimal("0.25"), ge=0)
+    per_contract_fee: Decimal = Field(default=Decimal("0"), ge=0)
+    contract_multiplier: PositiveInt = 100
 
 
 def _analysis_json(analysis: ActionAnalysis) -> dict[str, object]:
@@ -178,6 +190,35 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "risk_adjusted_opportunity_cost": str(
                 scorecard.risk_adjusted_opportunity_cost
             ),
+        }
+
+    @app.post("/v1/analysis/market-maker-quote")
+    def market_maker_quote(request: MarketMakerQuoteInput) -> dict[str, object]:
+        try:
+            plan = quote_for_preset(
+                request.risk_preset,
+                theoretical_price=request.theoretical_price,
+                option_inventory=request.option_inventory,
+                tick_size=request.tick_size,
+                base_half_spread=request.base_half_spread,
+                max_inventory_skew=request.max_inventory_skew,
+                per_contract_fee=request.per_contract_fee,
+                contract_multiplier=request.contract_multiplier,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return {
+            "storage": "stateless",
+            "risk_preset": request.risk_preset.value,
+            "theoretical_price": str(plan.theoretical_price),
+            "reservation_price": str(plan.reservation_price),
+            "inventory_skew": str(plan.inventory_skew),
+            "effective_half_spread": str(plan.effective_half_spread),
+            "bid_price": str(plan.bid_price) if plan.bid_price is not None else None,
+            "ask_price": str(plan.ask_price),
+            "bid_quantity": plan.bid_quantity,
+            "ask_quantity": plan.ask_quantity,
+            "explanation": "Long inventory lowers both quotes; short inventory raises them. Fees widen the spread.",
         }
 
     @app.post("/v1/sessions", status_code=201)

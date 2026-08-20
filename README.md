@@ -23,6 +23,7 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - A hybrid FastAPI boundary: stateless earnings analysis plus durable exchange commands.
 - Delta-targeted stock hedging with explicit per-share and fixed transaction fees.
 - Reconciled P&L attribution across option inventory, stock hedges, and fees.
+- Inventory-skewed, fee-aware two-sided quote plans bounded by the selected risk preset.
 
 All example markets are synthetic and explicitly seeded.
 
@@ -59,7 +60,7 @@ python3 -m venv .venv
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, and [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, and [Milestone 8](docs/milestone-8.md) for inventory-aware quoting.
 
 ## Next milestones
 
