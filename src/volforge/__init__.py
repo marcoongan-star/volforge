@@ -14,7 +14,7 @@ from .decisions import (
     score_decision,
     score_decision_for_preset,
 )
-from .ledger import AccountSnapshot, TradingLedger
+from .ledger import AccountSnapshot, PnlAttribution, StockTrade, TradingLedger
 from .experiments import ExperimentResult, run_long_straddle_experiment
 from .orderbook import PriceTimeOrderBook
 from .pricing import OptionMetrics, black_scholes
@@ -39,6 +39,7 @@ __all__ = [
     "OptionType",
     "Order",
     "PriceTimeOrderBook",
+    "PnlAttribution",
     "RiskLimits",
     "RiskAdjustedAction",
     "RiskPreset",
@@ -46,6 +47,7 @@ __all__ = [
     "SessionEvent",
     "SqliteSessionStore",
     "StoredSession",
+    "StockTrade",
     "TradingSession",
     "TradingLedger",
     "TradeAction",
