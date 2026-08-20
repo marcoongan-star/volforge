@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from .contracts import Fill, Order, Side
-from .ledger import AccountSnapshot, TradingLedger
+from .ledger import AccountSnapshot, StockTrade, TradingLedger
 from .orderbook import PriceTimeOrderBook
 
 
@@ -14,6 +14,7 @@ class EventType(StrEnum):
     ORDER_ACCEPTED = "order.accepted"
     ORDER_CANCELLED = "order.cancelled"
     FILL_CREATED = "fill.created"
+    STOCK_HEDGE_EXECUTED = "stock_hedge.executed"
 
 
 @dataclass(frozen=True)
@@ -116,8 +117,42 @@ class TradingSession:
     def active_orders(self) -> tuple[Order, ...]:
         return self.book.active_orders()
 
-    def account(self, participant_id: str, option_mark: Decimal) -> AccountSnapshot:
-        return self.ledger.snapshot(participant_id, option_mark)
+    def rebalance_delta(
+        self,
+        participant_id: str,
+        *,
+        option_delta: Decimal,
+        stock_price: Decimal,
+        per_share_fee: Decimal = Decimal("0"),
+        fixed_fee: Decimal = Decimal("0"),
+    ) -> StockTrade | None:
+        trade = self.ledger.rebalance_delta(
+            participant_id,
+            option_delta=option_delta,
+            stock_price=stock_price,
+            per_share_fee=per_share_fee,
+            fixed_fee=fixed_fee,
+        )
+        if trade is not None:
+            account = self.ledger.snapshot(participant_id, Decimal("0"), stock_price)
+            self.log.append(
+                EventType.STOCK_HEDGE_EXECUTED,
+                participant_id=trade.participant_id,
+                quantity=trade.quantity,
+                price=trade.price,
+                fee=trade.fee,
+                option_delta=option_delta,
+                resulting_stock_inventory=account.stock_inventory,
+            )
+        return trade
+
+    def account(
+        self,
+        participant_id: str,
+        option_mark: Decimal,
+        stock_mark: Decimal = Decimal("0"),
+    ) -> AccountSnapshot:
+        return self.ledger.snapshot(participant_id, option_mark, stock_mark)
 
     @classmethod
     def replay(
@@ -149,6 +184,16 @@ class TradingSession:
                 )
             elif event.event_type is EventType.ORDER_CANCELLED:
                 session.cancel_order(data["order_id"])
+            elif event.event_type is EventType.STOCK_HEDGE_EXECUTED:
+                session.ledger.apply_stock_trade(
+                    StockTrade(
+                        participant_id=data["participant_id"],
+                        quantity=int(data["quantity"]),
+                        price=Decimal(data["price"]),
+                        fee=Decimal(data["fee"]),
+                    )
+                )
+                session.log.append(event.event_type, **data)
             elif event.event_type is not EventType.FILL_CREATED:
                 raise ValueError(f"unsupported event type: {event.event_type}")
         if session.log.events != events:

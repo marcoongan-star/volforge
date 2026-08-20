@@ -18,6 +18,7 @@ from .decisions import (
     score_decision_for_preset,
 )
 from .risk import RiskPreset
+from .ledger import AccountSnapshot
 from .session import TradingSession
 from .store import SqliteSessionStore
 
@@ -62,6 +63,14 @@ class OrderInput(BaseModel):
     quantity: PositiveInt
 
 
+class HedgeInput(BaseModel):
+    participant_id: str = Field(min_length=1, max_length=100)
+    option_delta: Decimal = Field(ge=-1, le=1)
+    stock_price: PositiveDecimal
+    per_share_fee: Decimal = Field(default=Decimal("0"), ge=0)
+    fixed_fee: Decimal = Field(default=Decimal("0"), ge=0)
+
+
 def _analysis_json(analysis: ActionAnalysis) -> dict[str, object]:
     return {
         "action": analysis.action.value,
@@ -101,6 +110,28 @@ def _session_json(session_id: str, session: TradingSession) -> dict[str, object]
             }
             for order in session.active_orders()
         ],
+    }
+
+
+def _account_json(account: AccountSnapshot) -> dict[str, object]:
+    return {
+        "participant_id": account.participant_id,
+        "starting_cash": str(account.starting_cash),
+        "cash": str(account.cash),
+        "option_inventory": account.option_inventory,
+        "option_mark": str(account.option_mark),
+        "option_inventory_value": str(account.inventory_value),
+        "stock_inventory": account.stock_inventory,
+        "stock_mark": str(account.stock_mark),
+        "stock_inventory_value": str(account.stock_inventory_value),
+        "equity": str(account.equity),
+        "pnl": str(account.pnl),
+        "attribution": {
+            "option_pnl": str(account.attribution.option_pnl),
+            "hedge_pnl": str(account.attribution.hedge_pnl),
+            "fees": str(account.attribution.fees),
+            "total_pnl": str(account.attribution.total_pnl),
+        },
     }
 
 
@@ -205,6 +236,51 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         except ValueError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         return _session_json(session_id, session)
+
+    @app.post("/v1/sessions/{session_id}/hedges")
+    def rebalance_session_delta(
+        session_id: str, request: HedgeInput
+    ) -> dict[str, object]:
+        try:
+            session = store.mutate(
+                session_id,
+                lambda current: current.rebalance_delta(
+                    request.participant_id,
+                    option_delta=request.option_delta,
+                    stock_price=request.stock_price,
+                    per_share_fee=request.per_share_fee,
+                    fixed_fee=request.fixed_fee,
+                ),
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="session not found") from error
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return {
+            "session": _session_json(session_id, session),
+            "account": _account_json(
+                session.account(
+                    request.participant_id,
+                    option_mark=Decimal("0"),
+                    stock_mark=request.stock_price,
+                )
+            ),
+        }
+
+    @app.get("/v1/sessions/{session_id}/accounts/{participant_id}")
+    def session_account(
+        session_id: str,
+        participant_id: str,
+        option_mark: Decimal,
+        stock_mark: Decimal = Decimal("0"),
+    ) -> dict[str, object]:
+        try:
+            session = store.load(session_id)
+            return _account_json(session.account(participant_id, option_mark, stock_mark))
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="session not found") from error
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     return app
 
