@@ -24,14 +24,15 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Delta-targeted stock hedging with explicit per-share and fixed transaction fees.
 - Reconciled P&L attribution across option inventory, stock hedges, and fees.
 - Inventory-skewed, fee-aware two-sided quote plans bounded by the selected risk preset.
+- A responsive React/TypeScript learning lab with pause, step, autoplay, quote-risk controls, delta math, and P&L attribution.
 
 All example markets are synthetic and explicitly seeded.
 
-## Planned stack
+## Stack
 
 - Python 3.12 for the exchange, pricing, risk and agents.
 - FastAPI for commands and analysis; WebSockets are the next live-event boundary.
-- React and TypeScript for the learning-lab interface.
+- React 19, TypeScript, and vinext for the learning-lab interface and free public build.
 - PostgreSQL for sessions and the append-only event log.
 - pytest, Docker and GitHub Actions for repeatable validation.
 
@@ -42,6 +43,16 @@ python3 -m venv .venv
 .venv/bin/pip install -e '.[test]'
 .venv/bin/pytest
 ```
+
+Start the public learning lab in a second terminal:
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:3000`. The hosted demonstration uses a clearly labeled synthetic replay; the durable Python session API remains the source of truth for accepted orders, fills, hedges, inventory, and cash when connected.
 
 ## Repository map
 
@@ -57,6 +68,8 @@ python3 -m venv .venv
 | `src/volforge/experiments.py` | Repeatable strategy experiments and uncertainty estimates |
 | `src/volforge/store.py` | SQLite session metadata and append-only events |
 | `src/volforge/api.py` | Stateless analysis and stateful exchange HTTP boundaries |
+| `frontend/app/trading-lab.tsx` | Interactive replay controls, delta explanation, and P&L view |
+| `frontend/app/globals.css` | Product styling and responsive layout |
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
@@ -64,6 +77,6 @@ Start with `tests/test_decisions.py` for the smallest quantitative example. See 
 
 ## Next milestones
 
-1. Add stock inventory, delta hedging, fees, and P&L attribution.
+1. Connect the public replay adapter to a deployed FastAPI session.
 2. Add switchable market-maker and directional agents.
-3. Stream the learning lab through WebSockets and a React interface.
+3. Stream appended session events through WebSockets with reconnect-by-sequence.
