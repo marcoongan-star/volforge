@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type LabEvent = {
+  kind: string;
+  time: string;
+  title: string;
+  explanation: string;
+  spot: number;
+  option: number;
+  delta: number;
+  inventory: number;
+  stock: number;
+  optionPnl: number;
+  hedgePnl: number;
+  fees: number;
+};
+
+const events: LabEvent[] = [
+  { kind: "SESSION", time: "09:29:58", title: "Synthetic earnings session opened", explanation: "The lab fixes the starting state so every run is replayable. No live market data is implied.", spot: 100, option: 4.25, delta: .52, inventory: 0, stock: 0, optionPnl: 0, hedgePnl: 0, fees: 0 },
+  { kind: "QUOTE", time: "09:30:00", title: "Market maker publishes 4.15 / 4.35", explanation: "The 20¢ spread pays for uncertainty. Inventory is flat, so the quote is symmetric around theoretical value.", spot: 100, option: 4.25, delta: .52, inventory: 0, stock: 0, optionPnl: 0, hedgePnl: 0, fees: 0 },
+  { kind: "FILL", time: "09:30:04", title: "Customer buys 5 calls at the ask", explanation: "Selling calls makes the market maker short 5 contracts and short delta. The fill earns spread but creates directional risk.", spot: 100.2, option: 4.35, delta: .52, inventory: -5, stock: 0, optionPnl: 50, hedgePnl: 0, fees: -2 },
+  { kind: "HEDGE", time: "09:30:06", title: "Agent buys 260 shares", explanation: "−5 contracts × 0.52 delta × 100 shares gives −260 delta, so buying 260 shares approximately neutralizes the position.", spot: 100.2, option: 4.35, delta: .52, inventory: -5, stock: 260, optionPnl: 50, hedgePnl: 0, fees: -6 },
+  { kind: "MOVE", time: "09:31:12", title: "Spot jumps after the synthetic release", explanation: "As spot rises, call delta increases. The old hedge is no longer exact—this is gamma risk in action.", spot: 101.5, option: 5.1, delta: .58, inventory: -5, stock: 260, optionPnl: -325, hedgePnl: 338, fees: -6 },
+  { kind: "MARK", time: "09:31:13", title: "Portfolio is marked to market", explanation: "The short calls lose $375 from the post-fill mark; spread capture and the stock hedge offset most, but not all, of that loss.", spot: 101.5, option: 5.1, delta: .58, inventory: -5, stock: 260, optionPnl: -325, hedgePnl: 338, fees: -6 },
+];
+
+export function TradingLab() {
+  const [cursor, setCursor] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [risk, setRisk] = useState<"balanced" | "tight" | "defensive">("balanced");
+  const current = events[cursor];
+  const totalPnl = current.optionPnl + current.hedgePnl + current.fees;
+
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      setCursor((value) => {
+        if (value >= events.length - 1) {
+          setPlaying(false);
+          return value;
+        }
+        return value + 1;
+      });
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [playing]);
+
+  const quote = useMemo(() => {
+    const width = risk === "tight" ? .14 : risk === "defensive" ? .34 : .2;
+    const skew = current.inventory < 0 ? -.05 : current.inventory > 0 ? .05 : 0;
+    return { bid: current.option - width / 2 + skew, ask: current.option + width / 2 + skew };
+  }, [current.inventory, current.option, risk]);
+
+  function reset() { setPlaying(false); setCursor(0); }
+  function step() { setPlaying(false); setCursor((value) => Math.min(events.length - 1, value + 1)); }
+
+  return (
+    <main className="lab-shell">
+      <header className="lab-nav">
+        <a className="vf-brand" href="#top"><span>V</span><div><strong>VOLFORGE</strong><small>OPTIONS LEARNING LAB</small></div></a>
+        <div className="scenario-label"><span /> SYNTHETIC SCENARIO · REPLAYABLE</div>
+        <a className="about-link" href="#method">Method</a>
+      </header>
+
+      <section className="lab-hero" id="top">
+        <div><p className="lab-kicker">Earnings market · Session VF-014</p><h1>Can you quote risk<br />before it <em>moves?</em></h1><p>Step through an options market-maker’s decisions. Watch a customer fill change inventory, delta, the hedge, and finally P&amp;L.</p></div>
+        <div className="control-deck">
+          <div><small>REPLAY CONTROL</small><strong>{playing ? "AUTOPLAYING" : cursor === events.length - 1 ? "SESSION COMPLETE" : "PAUSED AT EVENT " + (cursor + 1)}</strong></div>
+          <div className="controls"><button onClick={reset}>↺ Reset</button><button className="step" onClick={step} disabled={cursor === events.length - 1}>Step →</button><button className={playing ? "playing" : ""} onClick={() => setPlaying((value) => !value)}>{playing ? "Ⅱ Pause" : "▶ Autoplay"}</button></div>
+          <div className="progress-track"><span style={{ width: `${(cursor / (events.length - 1)) * 100}%` }} /></div>
+        </div>
+      </section>
+
+      <section className="market-strip">
+        <MarketStat label="UNDERLYING" value={`$${current.spot.toFixed(2)}`} change={`${(((current.spot / 100) - 1) * 100).toFixed(2)}%`} />
+        <MarketStat label="CALL THEO" value={`$${current.option.toFixed(2)}`} change={`Δ ${current.delta.toFixed(2)}`} />
+        <MarketStat label="YOUR QUOTE" value={`${quote.bid.toFixed(2)} / ${quote.ask.toFixed(2)}`} change={`${Math.round((quote.ask - quote.bid) * 100)}¢ wide`} />
+        <MarketStat label="OPTION INVENTORY" value={`${current.inventory}`} change="contracts" negative={current.inventory < 0} />
+        <MarketStat label="STOCK HEDGE" value={`${current.stock}`} change="shares" />
+      </section>
+
+      <section className="lab-grid">
+        <article className="event-panel">
+          <div className="section-head"><div><small>SERVER-OWNED EVENT LOG</small><h2>What happened</h2></div><span>{cursor + 1} / {events.length}</span></div>
+          <div className="event-list">
+            {events.map((event, index) => <button key={event.time} onClick={() => { setPlaying(false); setCursor(index); }} className={`${index === cursor ? "current" : ""} ${index > cursor ? "future" : ""}`}><span className="event-time">{event.time}</span><span className="event-kind">{event.kind}</span><strong>{event.title}</strong><i /></button>)}
+          </div>
+        </article>
+
+        <article className="explain-panel">
+          <div className="section-head"><div><small>FIRST-PRINCIPLES EXPLANATION</small><h2>Why it matters</h2></div><span className="event-number">0{cursor + 1}</span></div>
+          <p className="current-title">{current.title}</p><p className="current-explanation">{current.explanation}</p>
+          <div className="delta-equation"><small>CURRENT NET DELTA</small><div><span>{current.inventory} contracts</span><b>×</b><span>{current.delta.toFixed(2)} Δ</span><b>×</b><span>100</span><b>+</b><span>{current.stock} shares</span><b>=</b><strong>{Math.round(current.inventory * current.delta * 100 + current.stock)}</strong></div></div>
+          <fieldset><legend>QUOTE RISK PRESET</legend>{(["tight", "balanced", "defensive"] as const).map((item) => <button key={item} className={risk === item ? "active" : ""} onClick={() => setRisk(item)}>{item}</button>)}</fieldset>
+        </article>
+
+        <article className="pnl-panel">
+          <div className="section-head"><div><small>MARK-TO-MARKET ATTRIBUTION</small><h2>P&amp;L bridge</h2></div><strong className={totalPnl < 0 ? "loss" : "gain"}>{totalPnl >= 0 ? "+" : ""}${totalPnl}</strong></div>
+          <PnlBar label="Option + spread" value={current.optionPnl} max={400} />
+          <PnlBar label="Stock hedge" value={current.hedgePnl} max={400} />
+          <PnlBar label="Fees" value={current.fees} max={400} />
+          <div className="pnl-total"><span>Total marked P&amp;L</span><strong>{totalPnl >= 0 ? "+" : ""}${totalPnl}</strong></div>
+          <p>Attribution separates trading edge from hedge results. A good outcome in one replay is not evidence of a profitable strategy.</p>
+        </article>
+      </section>
+
+      <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Fill. Hedge. Explain.</h2><p>The browser controls playback; the API owns accepted orders, fills, hedges, cash, inventory, and the append-only event history. That boundary makes a session reconnectable and auditable.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> Replayable events <b>04</b> No profit claims</div></section>
+      <footer><strong>VOLFORGE</strong><span>Educational simulation · not investment advice · no live market data</span></footer>
+    </main>
+  );
+}
+
+function MarketStat({ label, value, change, negative = false }: { label: string; value: string; change: string; negative?: boolean }) { return <div className="market-stat"><small>{label}</small><strong className={negative ? "loss" : ""}>{value}</strong><span>{change}</span></div>; }
+function PnlBar({ label, value, max }: { label: string; value: number; max: number }) { const width = Math.min(100, Math.abs(value) / max * 100); return <div className="pnl-row"><div><span>{label}</span><strong className={value < 0 ? "loss" : "gain"}>{value >= 0 ? "+" : ""}${value}</strong></div><div className="pnl-track"><i className={value < 0 ? "negative" : "positive"} style={{ width: `${width}%` }} /></div></div>; }
