@@ -137,6 +137,30 @@ class SqliteSessionStore:
             contract_multiplier=metadata.contract_multiplier,
         )
 
+    def events_after(
+        self, session_id: str, *, after_sequence: int = 0, limit: int = 50
+    ) -> tuple[SessionEvent, ...]:
+        """Read a contiguous recovery page without rebuilding the whole session."""
+        if after_sequence < 0:
+            raise ValueError("after_sequence cannot be negative")
+        if limit < 1 or limit > 101:
+            raise ValueError("limit must be between 1 and 101")
+        self.metadata(session_id)
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT sequence, event_type, payload_json FROM session_events "
+                "WHERE session_id = ? AND sequence > ? ORDER BY sequence LIMIT ?",
+                (session_id, after_sequence, limit),
+            ).fetchall()
+        return tuple(
+            SessionEvent(
+                sequence=row["sequence"],
+                event_type=EventType(row["event_type"]),
+                payload=tuple(sorted(json.loads(row["payload_json"]).items())),
+            )
+            for row in rows
+        )
+
     def mutate(self, session_id: str, command) -> TradingSession:  # type: ignore[no-untyped-def]
         session = self.load(session_id)
         previous_count = len(session.log.events)

@@ -70,3 +70,47 @@ def test_session_commands_survive_app_restart(tmp_path) -> None:
     ]
     assert payload["active_orders"][0]["remaining"] == 2
     assert payload["active_orders"][0]["price"] == "3.25"
+
+
+def test_event_recovery_resumes_after_last_confirmed_sequence(tmp_path) -> None:
+    client = TestClient(create_app(tmp_path / "volforge.db"))
+    created = client.post("/v1/sessions", json={"symbol": "wirtz"}).json()
+    session_id = created["session_id"]
+    client.post(
+        f"/v1/sessions/{session_id}/participants",
+        json={"participant_id": "maker", "starting_cash": "10000"},
+    )
+    client.post(
+        f"/v1/sessions/{session_id}/orders",
+        json={
+            "order_id": "bid-1",
+            "participant_id": "maker",
+            "side": "buy",
+            "price": "3.20",
+            "quantity": 2,
+        },
+    )
+
+    recovery = client.get(
+        f"/v1/sessions/{session_id}/events",
+        params={"after_sequence": 1, "limit": 1},
+    )
+    assert recovery.status_code == 200
+    payload = recovery.json()
+    assert payload["after_sequence"] == 1
+    assert payload["next_sequence"] == 2
+    assert payload["has_more"] is False
+    assert [event["sequence"] for event in payload["events"]] == [2]
+    assert payload["events"][0]["event_type"] == "order.accepted"
+
+
+def test_event_recovery_rejects_invalid_cursor_and_unknown_session(tmp_path) -> None:
+    client = TestClient(create_app(tmp_path / "volforge.db"))
+    assert client.get(
+        "/v1/sessions/missing/events", params={"after_sequence": 0}
+    ).status_code == 404
+    created = client.post("/v1/sessions", json={"symbol": "wirtz"}).json()
+    assert client.get(
+        f"/v1/sessions/{created['session_id']}/events",
+        params={"after_sequence": -1},
+    ).status_code == 422

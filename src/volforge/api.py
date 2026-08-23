@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .contracts import Side
@@ -20,7 +20,7 @@ from .decisions import (
 from .risk import RiskPreset
 from .ledger import AccountSnapshot
 from .market_maker import quote_for_preset
-from .session import TradingSession
+from .session import SessionEvent, TradingSession
 from .store import SqliteSessionStore
 
 
@@ -102,14 +102,7 @@ def _session_json(session_id: str, session: TradingSession) -> dict[str, object]
         "session_id": session_id,
         "symbol": session.symbol,
         "tick_size": str(session.tick_size),
-        "events": [
-            {
-                "sequence": event.sequence,
-                "event_type": event.event_type.value,
-                "data": event.data(),
-            }
-            for event in session.log.events
-        ],
+        "events": [_event_json(event) for event in session.log.events],
         "active_orders": [
             {
                 "order_id": order.order_id,
@@ -122,6 +115,14 @@ def _session_json(session_id: str, session: TradingSession) -> dict[str, object]
             }
             for order in session.active_orders()
         ],
+    }
+
+
+def _event_json(event: SessionEvent) -> dict[str, object]:
+    return {
+        "sequence": event.sequence,
+        "event_type": event.event_type.value,
+        "data": event.data(),
     }
 
 
@@ -241,6 +242,30 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             return _session_json(session_id, store.load(session_id))
         except KeyError as error:
             raise HTTPException(status_code=404, detail="session not found") from error
+
+    @app.get("/v1/sessions/{session_id}/events")
+    def session_events(
+        session_id: str,
+        after_sequence: int = Query(default=0, ge=0),
+        limit: int = Query(default=50, ge=1, le=100),
+    ) -> dict[str, object]:
+        """Return the canonical event suffix used after a client reconnects."""
+        try:
+            recovery_page = store.events_after(
+                session_id, after_sequence=after_sequence, limit=limit + 1
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="session not found") from error
+        delivered = recovery_page[:limit]
+        next_sequence = delivered[-1].sequence if delivered else after_sequence
+        return {
+            "session_id": session_id,
+            "after_sequence": after_sequence,
+            "next_sequence": next_sequence,
+            "has_more": len(recovery_page) > limit,
+            "events": [_event_json(event) for event in delivered],
+            "recovery_rule": "Replace or append only contiguous server events after the last confirmed sequence.",
+        }
 
     @app.post("/v1/sessions/{session_id}/participants")
     def register_participant(
