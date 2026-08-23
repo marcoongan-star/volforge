@@ -34,6 +34,10 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /Server-owned event log/i);
   assert.match(html, /P&amp;L bridge/);
   assert.match(html, /Synthetic inputs only/);
+  assert.match(html, /Recovery cursor/i);
+  assert.match(html, /Confirmed through sequence 1/i);
+  assert.match(html, /Simulate disconnect/i);
+  assert.match(html, /Cursor recovery/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
