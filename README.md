@@ -25,6 +25,7 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Reconciled P&L attribution across option inventory, stock hedges, and fees.
 - Inventory-skewed, fee-aware two-sided quote plans bounded by the selected risk preset.
 - A responsive React/TypeScript learning lab with pause, step, autoplay, quote-risk controls, delta math, and P&L attribution.
+- Cursor-based event recovery that resumes after the last confirmed sequence without rebuilding or inventing exchange state.
 
 All example markets are synthetic and explicitly seeded.
 
@@ -73,10 +74,10 @@ Open `http://localhost:3000`. The hosted demonstration uses a clearly labeled sy
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, and [Milestone 8](docs/milestone-8.md) for inventory-aware quoting.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, and [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery.
 
 ## Next milestones
 
 1. Connect the public replay adapter to a deployed FastAPI session.
 2. Add switchable market-maker and directional agents.
-3. Stream appended session events through WebSockets with reconnect-by-sequence.
+3. Add WebSocket notifications on top of the tested reconnect-by-sequence boundary.
