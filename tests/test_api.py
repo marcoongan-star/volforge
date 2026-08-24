@@ -1,3 +1,5 @@
+import pytest
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from volforge.api import create_app
@@ -114,3 +116,45 @@ def test_event_recovery_rejects_invalid_cursor_and_unknown_session(tmp_path) -> 
         f"/v1/sessions/{created['session_id']}/events",
         params={"after_sequence": -1},
     ).status_code == 422
+
+
+def test_websocket_notifies_then_defers_payload_recovery_to_http(tmp_path) -> None:
+    client = TestClient(create_app(tmp_path / "volforge.db"))
+    session_id = client.post("/v1/sessions", json={"symbol": "wirtz"}).json()[
+        "session_id"
+    ]
+    client.post(
+        f"/v1/sessions/{session_id}/participants",
+        json={"participant_id": "maker", "starting_cash": "10000"},
+    )
+
+    with client.websocket_connect(
+        f"/v1/sessions/{session_id}/stream?after_sequence=0"
+    ) as socket:
+        ready = socket.receive_json()
+        available = socket.receive_json()
+        socket.send_text("ping")
+        pong = socket.receive_json()
+
+    assert ready == {
+        "type": "stream.ready",
+        "session_id": session_id,
+        "after_sequence": 0,
+        "recovery_url": f"/v1/sessions/{session_id}/events?after_sequence=0",
+    }
+    assert available["type"] == "events.available"
+    assert available["after_sequence"] == 0
+    assert available["next_sequence"] == 1
+    assert available["event_count"] == 1
+    assert pong == {"type": "pong", "confirmed_sequence": 1}
+
+    recovered = client.get(available["recovery_url"]).json()
+    assert [event["sequence"] for event in recovered["events"]] == [1]
+
+
+def test_websocket_rejects_an_unknown_session(tmp_path) -> None:
+    client = TestClient(create_app(tmp_path / "volforge.db"))
+    with pytest.raises(WebSocketDisconnect) as closed:
+        with client.websocket_connect("/v1/sessions/missing/stream") as socket:
+            socket.receive_json()
+    assert closed.value.code == 4404

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from .contracts import Side
@@ -347,6 +348,64 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="session not found") from error
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.websocket("/v1/sessions/{session_id}/stream")
+    async def session_stream(
+        websocket: WebSocket,
+        session_id: str,
+        after_sequence: int = Query(default=0, ge=0),
+    ) -> None:
+        """Notify clients that durable events are available after their cursor."""
+        try:
+            store.metadata(session_id)
+        except KeyError:
+            await websocket.close(code=4404, reason="session not found")
+            return
+
+        await websocket.accept()
+        cursor = after_sequence
+        await websocket.send_json(
+            {
+                "type": "stream.ready",
+                "session_id": session_id,
+                "after_sequence": cursor,
+                "recovery_url": f"/v1/sessions/{session_id}/events?after_sequence={cursor}",
+            }
+        )
+        try:
+            while True:
+                available = store.events_after(
+                    session_id, after_sequence=cursor, limit=101
+                )
+                if available:
+                    next_sequence = available[-1].sequence
+                    await websocket.send_json(
+                        {
+                            "type": "events.available",
+                            "session_id": session_id,
+                            "after_sequence": cursor,
+                            "next_sequence": next_sequence,
+                            "event_count": len(available),
+                            "has_more": len(available) == 101,
+                            "recovery_url": (
+                                f"/v1/sessions/{session_id}/events"
+                                f"?after_sequence={cursor}"
+                            ),
+                        }
+                    )
+                    cursor = next_sequence
+                try:
+                    message = await asyncio.wait_for(
+                        websocket.receive_text(), timeout=0.25
+                    )
+                except TimeoutError:
+                    continue
+                if message == "ping":
+                    await websocket.send_json(
+                        {"type": "pong", "confirmed_sequence": cursor}
+                    )
+        except WebSocketDisconnect:
+            return
 
     return app
 
