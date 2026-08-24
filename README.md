@@ -26,13 +26,14 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Inventory-skewed, fee-aware two-sided quote plans bounded by the selected risk preset.
 - A responsive React/TypeScript learning lab with pause, step, autoplay, quote-risk controls, delta math, and P&L attribution.
 - Cursor-based event recovery that resumes after the last confirmed sequence without rebuilding or inventing exchange state.
+- WebSocket sequence notifications that direct reconnecting clients back to the durable HTTP recovery path.
 
 All example markets are synthetic and explicitly seeded.
 
 ## Stack
 
 - Python 3.12 for the exchange, pricing, risk and agents.
-- FastAPI for commands and analysis; WebSockets are the next live-event boundary.
+- FastAPI for commands and analysis, with WebSockets for low-latency sequence notifications.
 - React 19, TypeScript, and vinext for the learning-lab interface and free public build.
 - PostgreSQL for sessions and the append-only event log.
 - pytest, Docker and GitHub Actions for repeatable validation.
@@ -68,16 +69,16 @@ Open `http://localhost:3000`. The hosted demonstration uses a clearly labeled sy
 | `src/volforge/decisions.py` | Probability-weighted earnings decisions and benchmark review |
 | `src/volforge/experiments.py` | Repeatable strategy experiments and uncertainty estimates |
 | `src/volforge/store.py` | SQLite session metadata and append-only events |
-| `src/volforge/api.py` | Stateless analysis and stateful exchange HTTP boundaries |
+| `src/volforge/api.py` | Stateless analysis, stateful exchange HTTP, and WebSocket notification boundaries |
 | `frontend/app/trading-lab.tsx` | Interactive replay controls, delta explanation, and P&L view |
 | `frontend/app/globals.css` | Product styling and responsive layout |
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, and [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery, and [Milestone 10](docs/milestone-10.md) for WebSocket notifications over that recovery layer.
 
 ## Next milestones
 
 1. Connect the public replay adapter to a deployed FastAPI session.
 2. Add switchable market-maker and directional agents.
-3. Add WebSocket notifications on top of the tested reconnect-by-sequence boundary.
+3. Connect the public lab to the tested WebSocket and recovery endpoints.
