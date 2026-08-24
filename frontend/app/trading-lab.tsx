@@ -90,7 +90,7 @@ export function TradingLab() {
       <section className="lab-grid">
         <article className="event-panel">
           <div className="section-head"><div><small>SERVER-OWNED EVENT LOG</small><h2>What happened</h2></div><span>{cursor + 1} / {events.length}</span></div>
-          <div className={`event-sync ${sync}`}><span /><div><small>RECOVERY CURSOR</small><strong>{sync === "connected" ? `Confirmed through sequence ${cursor + 1}` : sync === "recovering" ? `Fetching events after ${cursor + 1}` : `Offline after sequence ${cursor + 1}`}</strong><p>{sync === "offline" ? "Local state is frozen until canonical events are recovered." : "The client resumes after its last confirmed server sequence."}</p></div>{sync === "connected" ? <button onClick={disconnect}>Simulate disconnect</button> : <button onClick={reconnect} disabled={sync === "recovering"}>{sync === "recovering" ? "Recovering…" : "Resume from cursor"}</button>}</div>
+          <div className={`event-sync ${sync}`}><span /><div><small>WEBSOCKET NOTIFY · HTTP RECOVER</small><strong>{sync === "connected" ? `Confirmed through sequence ${cursor + 1}` : sync === "recovering" ? `Fetching events after ${cursor + 1}` : `Offline after sequence ${cursor + 1}`}</strong><p>{sync === "offline" ? "Local state is frozen until canonical events are recovered." : "The socket announces new work; the event endpoint restores canonical state."}</p></div>{sync === "connected" ? <button onClick={disconnect}>Simulate disconnect</button> : <button onClick={reconnect} disabled={sync === "recovering"}>{sync === "recovering" ? "Recovering…" : "Resume from cursor"}</button>}</div>
           <div className="event-list">
             {events.map((event, index) => <button key={event.time} onClick={() => { setPlaying(false); setCursor(index); }} className={`${index === cursor ? "current" : ""} ${index > cursor ? "future" : ""}`}><span className="event-time">{event.time}</span><span className="event-kind">{event.kind}</span><strong>{event.title}</strong><i /></button>)}
           </div>
@@ -113,7 +113,7 @@ export function TradingLab() {
         </article>
       </section>
 
-      <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Fill. Hedge. Explain.</h2><p>The browser controls playback; the API owns accepted orders, fills, hedges, cash, inventory, and the append-only event history. On reconnect, the client asks for events after its last confirmed sequence and applies only the contiguous server suffix.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> Cursor recovery <b>04</b> No profit claims</div></section>
+      <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Fill. Hedge. Explain.</h2><p>The browser controls playback; the API owns accepted orders, fills, hedges, cash, inventory, and the append-only event history. WebSockets announce new sequences quickly. On reconnect, the client asks for events after its last confirmed sequence and applies only the contiguous server suffix.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> WebSocket + cursor recovery <b>04</b> No profit claims</div></section>
       <footer><strong>VOLFORGE</strong><span>Educational simulation · not investment advice · no live market data</span></footer>
     </main>
   );
