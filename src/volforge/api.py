@@ -10,6 +10,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from .agents import plan_directional_trade
 from .contracts import Side
 from .decisions import (
     ActionAnalysis,
@@ -82,6 +83,17 @@ class MarketMakerQuoteInput(BaseModel):
     max_inventory_skew: Decimal = Field(default=Decimal("0.25"), ge=0)
     per_contract_fee: Decimal = Field(default=Decimal("0"), ge=0)
     contract_multiplier: PositiveInt = 100
+
+
+class AgentComparisonInput(BaseModel):
+    theoretical_price: PositiveDecimal
+    forecast_price: PositiveDecimal
+    confidence: Decimal = Field(ge=0, le=1)
+    scenario_volatility: PositiveDecimal
+    transaction_cost: Decimal = Field(default=Decimal("0.02"), ge=0)
+    option_inventory: int = 0
+    risk_preset: RiskPreset = RiskPreset.BALANCED
+    tick_size: PositiveDecimal = Decimal("0.01")
 
 
 def _analysis_json(analysis: ActionAnalysis) -> dict[str, object]:
@@ -221,6 +233,48 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "bid_quantity": plan.bid_quantity,
             "ask_quantity": plan.ask_quantity,
             "explanation": "Long inventory lowers both quotes; short inventory raises them. Fees widen the spread.",
+        }
+
+    @app.post("/v1/analysis/agents/compare")
+    def compare_agents(request: AgentComparisonInput) -> dict[str, object]:
+        try:
+            maker = quote_for_preset(
+                request.risk_preset,
+                theoretical_price=request.theoretical_price,
+                option_inventory=request.option_inventory,
+                tick_size=request.tick_size,
+                per_contract_fee=request.transaction_cost * Decimal("100"),
+            )
+            directional = plan_directional_trade(
+                theoretical_price=request.theoretical_price,
+                forecast_price=request.forecast_price,
+                confidence=request.confidence,
+                scenario_volatility=request.scenario_volatility,
+                transaction_cost=request.transaction_cost,
+                risk_preset=request.risk_preset,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return {
+            "storage": "stateless",
+            "risk_preset": request.risk_preset.value,
+            "market_maker": {
+                "objective": "earn spread while controlling inventory",
+                "bid_price": str(maker.bid_price) if maker.bid_price is not None else None,
+                "ask_price": str(maker.ask_price),
+                "bid_quantity": maker.bid_quantity,
+                "ask_quantity": maker.ask_quantity,
+                "inventory_skew": str(maker.inventory_skew),
+            },
+            "directional": {
+                "objective": "trade only when forecast edge clears costs and uncertainty",
+                "action": directional.action.value,
+                "quantity": directional.quantity,
+                "raw_edge": str(directional.raw_edge),
+                "confidence_weighted_edge": str(directional.confidence_weighted_edge),
+                "risk_hurdle": str(directional.risk_hurdle),
+                "edge_after_hurdle": str(directional.edge_after_hurdle),
+            },
         }
 
     @app.post("/v1/sessions", status_code=201)

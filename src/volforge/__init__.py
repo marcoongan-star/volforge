@@ -1,5 +1,6 @@
 """VolForge quantitative exchange core."""
 
+from .agents import DirectionalAction, DirectionalPlan, plan_directional_trade
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
     ActionAnalysis,
@@ -29,6 +30,8 @@ __all__ = [
     "EarningsOutcome",
     "ActionAnalysis",
     "DecisionReview",
+    "DirectionalAction",
+    "DirectionalPlan",
     "DecisionScorecard",
     "AccountSnapshot",
     "EventLog",
@@ -57,6 +60,7 @@ __all__ = [
     "black_scholes",
     "limits_for",
     "plan_market_maker_quote",
+    "plan_directional_trade",
     "quote_for_preset",
     "review_decision",
     "risk_aversion_for",
