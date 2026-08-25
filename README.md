@@ -75,10 +75,10 @@ Open `http://localhost:3000`. The hosted demonstration uses a clearly labeled sy
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery, and [Milestone 10](docs/milestone-10.md) for WebSocket notifications over that recovery layer.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery, [Milestone 10](docs/milestone-10.md) for WebSocket notifications over that recovery layer, and [Milestone 11](docs/milestone-11.md) for comparing market-making and directional objectives.
 
 ## Next milestones
 
 1. Connect the public replay adapter to a deployed FastAPI session.
-2. Add switchable market-maker and directional agents.
+2. Replay both agents across many seeded paths and compare their P&L distributions.
 3. Connect the public lab to the tested WebSocket and recovery endpoints.
