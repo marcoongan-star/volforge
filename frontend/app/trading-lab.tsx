@@ -30,6 +30,7 @@ export function TradingLab() {
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [risk, setRisk] = useState<"balanced" | "tight" | "defensive">("balanced");
+  const [agent, setAgent] = useState<"maker" | "directional">("maker");
   const [sync, setSync] = useState<"connected" | "offline" | "recovering">("connected");
   const current = events[cursor];
   const totalPnl = current.optionPnl + current.hedgePnl + current.fees;
@@ -53,6 +54,21 @@ export function TradingLab() {
     const skew = current.inventory < 0 ? -.05 : current.inventory > 0 ? .05 : 0;
     return { bid: current.option - width / 2 + skew, ask: current.option + width / 2 + skew };
   }, [current.inventory, current.option, risk]);
+  const directional = useMemo(() => {
+    const forecast = 5.0;
+    const confidence = 0.9;
+    const scenarioVolatility = 0.5;
+    const cost = 0.02;
+    const penalty = risk === "defensive" ? 1 : risk === "tight" ? 0.25 : 0.6;
+    const rawEdge = forecast - current.option;
+    const hurdle = cost + (1 - confidence) * scenarioVolatility * penalty;
+    const edgeAfterHurdle = Math.abs(rawEdge * confidence) - hurdle;
+    return {
+      action: edgeAfterHurdle <= 0 ? "HOLD" : rawEdge > 0 ? "BUY" : "SELL",
+      forecast,
+      edgeAfterHurdle,
+    };
+  }, [current.option, risk]);
 
   function reset() { setPlaying(false); setCursor(0); }
   function step() { setPlaying(false); setCursor((value) => Math.min(events.length - 1, value + 1)); }
@@ -99,6 +115,12 @@ export function TradingLab() {
         <article className="explain-panel">
           <div className="section-head"><div><small>FIRST-PRINCIPLES EXPLANATION</small><h2>Why it matters</h2></div><span className="event-number">0{cursor + 1}</span></div>
           <p className="current-title">{current.title}</p><p className="current-explanation">{current.explanation}</p>
+          <div className="agent-switch" role="group" aria-label="Trading agent objective"><button className={agent === "maker" ? "active" : ""} onClick={() => setAgent("maker")}>Market maker</button><button className={agent === "directional" ? "active" : ""} onClick={() => setAgent("directional")}>Directional</button></div>
+          <div className="agent-decision">
+            <small>{agent === "maker" ? "TWO-SIDED OBJECTIVE" : "ONE-SIDED OBJECTIVE"}</small>
+            <strong>{agent === "maker" ? `QUOTE ${quote.bid.toFixed(2)} / ${quote.ask.toFixed(2)}` : `${directional.action} · FORECAST $${directional.forecast.toFixed(2)}`}</strong>
+            <p>{agent === "maker" ? "Earn spread while moving inventory back toward zero; no directional forecast is required." : directional.action === "HOLD" ? "The confidence-weighted forecast edge does not clear costs and uncertainty, so the agent stays flat." : `The confidence-weighted edge clears the risk hurdle by $${directional.edgeAfterHurdle.toFixed(2)} per option unit.`}</p>
+          </div>
           <div className="delta-equation"><small>CURRENT NET DELTA</small><div><span>{current.inventory} contracts</span><b>×</b><span>{current.delta.toFixed(2)} Δ</span><b>×</b><span>100</span><b>+</b><span>{current.stock} shares</span><b>=</b><strong>{Math.round(current.inventory * current.delta * 100 + current.stock)}</strong></div></div>
           <fieldset><legend>QUOTE RISK PRESET</legend>{(["tight", "balanced", "defensive"] as const).map((item) => <button key={item} className={risk === item ? "active" : ""} onClick={() => setRisk(item)}>{item}</button>)}</fieldset>
         </article>
@@ -113,7 +135,7 @@ export function TradingLab() {
         </article>
       </section>
 
-      <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Fill. Hedge. Explain.</h2><p>The browser controls playback; the API owns accepted orders, fills, hedges, cash, inventory, and the append-only event history. WebSockets announce new sequences quickly. On reconnect, the client asks for events after its last confirmed sequence and applies only the contiguous server suffix.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> WebSocket + cursor recovery <b>04</b> No profit claims</div></section>
+      <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Predict. Hedge. Explain.</h2><p>The market maker earns spread while controlling inventory. The directional agent trades only when a confidence-weighted forecast clears costs and an uncertainty hurdle. The browser explains both; the API owns the tested calculations, accepted orders, fills, hedges, and append-only history.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> Competing agent objectives <b>04</b> WebSocket + cursor recovery <b>05</b> No profit claims</div></section>
       <footer><strong>VOLFORGE</strong><span>Educational simulation · not investment advice · no live market data</span></footer>
     </main>
   );

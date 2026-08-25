@@ -23,3 +23,12 @@ a { color:inherit; text-decoration:none; }
 footer { padding:24px clamp(20px,5vw,78px); background:#111a22; color:#8d989f; display:flex; justify-content:space-between; font-size:8px; letter-spacing:.5px; } footer strong { color:white; letter-spacing:2px; }
 @media (max-width:900px) { .lab-hero { grid-template-columns:1fr; }.market-strip { grid-template-columns:repeat(2,1fr); }.market-stat:last-child { grid-column:1/-1; }.lab-grid { grid-template-columns:1fr; }.event-panel { grid-row:auto; } }
 @media (max-width:560px) { .scenario-label { display:none; }.about-link { margin-left:auto; }.lab-hero { padding-top:45px; gap:35px; }.lab-hero h1 { letter-spacing:-2px; }.controls { grid-template-columns:1fr 1fr; }.controls button:last-child { grid-column:1/-1; }.market-strip { padding:0; }.market-stat { padding:16px 13px; }.lab-grid { padding:30px 12px 45px; }.lab-grid article { padding:18px; }.event-sync { grid-template-columns:auto 1fr; }.event-sync button { grid-column:1/-1; }.event-list button { grid-template-columns:52px 48px 1fr; }.event-list i { display:none; }.delta-equation div { line-height:1.8; }.method { padding:55px 24px; } footer { flex-direction:column; gap:8px; } }
+
+.agent-switch { margin:18px 0 0; display:grid; grid-template-columns:1fr 1fr; }
+.agent-switch button { padding:10px; border:1px solid var(--line); background:white; color:#717a80; font:700 8px var(--font-geist-mono),monospace; text-transform:uppercase; cursor:pointer; }
+.agent-switch button+button { border-left:0; }
+.agent-switch button.active { color:white; background:var(--orange); border-color:var(--orange); }
+.agent-decision { padding:14px 16px; border:1px solid var(--line); border-top:0; background:#fffaf6; }
+.agent-decision small { display:block; color:#9b6d50; font:700 7px var(--font-geist-mono),monospace; letter-spacing:.5px; }
+.agent-decision strong { display:block; margin:7px 0; color:#111a22; font:700 12px var(--font-geist-mono),monospace; }
+.agent-decision p { margin:0; color:#646c71; font-size:9px; line-height:1.55; }
