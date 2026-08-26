@@ -38,6 +38,9 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /Confirmed through sequence 1/i);
   assert.match(html, /Simulate disconnect/i);
   assert.match(html, /WebSocket \+ cursor recovery/i);
+  assert.match(html, /500 PAIRED SYNTHETIC PATHS/i);
+  assert.match(html, /EXPECTED SHORTFALL/i);
+  assert.match(html, /Directional outperformed on 32\.60% of paths/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
@@ -47,4 +50,5 @@ test("labels the scenario and avoids performance claims", async () => {
   assert.match(html, /synthetic scenario/i);
   assert.match(html, /not evidence of a profitable strategy/i);
   assert.match(html, /not investment advice/i);
+  assert.match(html, /not expected live performance/i);
 });
