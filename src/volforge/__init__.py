@@ -1,6 +1,11 @@
 """VolForge quantitative exchange core."""
 
 from .agents import DirectionalAction, DirectionalPlan, plan_directional_trade
+from .agent_experiments import (
+    AgentComparisonExperiment,
+    AgentDistribution,
+    run_agent_comparison_experiment,
+)
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
     ActionAnalysis,
@@ -29,6 +34,8 @@ __all__ = [
     "EarningsScenario",
     "EarningsOutcome",
     "ActionAnalysis",
+    "AgentComparisonExperiment",
+    "AgentDistribution",
     "DecisionReview",
     "DirectionalAction",
     "DirectionalPlan",
@@ -67,4 +74,5 @@ __all__ = [
     "score_decision",
     "score_decision_for_preset",
     "run_long_straddle_experiment",
+    "run_agent_comparison_experiment",
 ]

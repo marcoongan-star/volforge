@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnec
 from pydantic import BaseModel, Field
 
 from .agents import plan_directional_trade
+from .agent_experiments import AgentDistribution, run_agent_comparison_experiment
 from .contracts import Side
 from .decisions import (
     ActionAnalysis,
@@ -24,6 +25,7 @@ from .ledger import AccountSnapshot
 from .market_maker import quote_for_preset
 from .session import SessionEvent, TradingSession
 from .store import SqliteSessionStore
+from .scenario import EarningsScenario
 
 
 PositiveDecimal = Annotated[Decimal, Field(gt=0)]
@@ -96,6 +98,20 @@ class AgentComparisonInput(BaseModel):
     tick_size: PositiveDecimal = Decimal("0.01")
 
 
+class AgentExperimentInput(BaseModel):
+    initial_spot: PositiveDecimal = Decimal("100")
+    annual_volatility: Decimal = Field(default=Decimal("0.24"), ge=0)
+    earnings_jump_volatility: Decimal = Field(default=Decimal("0.08"), ge=0)
+    strike: PositiveDecimal = Decimal("100")
+    forecast_option_price: PositiveDecimal
+    confidence: Decimal = Field(ge=0, le=1)
+    scenario_option_volatility: PositiveDecimal = Decimal("0.50")
+    transaction_cost: Decimal = Field(default=Decimal("0.02"), ge=0)
+    risk_preset: RiskPreset = RiskPreset.BALANCED
+    trials: int = Field(default=500, ge=2, le=5000)
+    base_seed: int = 14000
+
+
 def _analysis_json(analysis: ActionAnalysis) -> dict[str, object]:
     return {
         "action": analysis.action.value,
@@ -107,6 +123,18 @@ def _analysis_json(analysis: ActionAnalysis) -> dict[str, object]:
         "outcome_pnls": [
             {"label": label, "pnl": str(pnl)} for label, pnl in analysis.outcome_pnls
         ],
+    }
+
+
+def _distribution_json(distribution: AgentDistribution) -> dict[str, str]:
+    return {
+        "mean_pnl": str(distribution.mean_pnl),
+        "pnl_standard_deviation": str(distribution.pnl_standard_deviation),
+        "probability_of_profit": str(distribution.probability_of_profit),
+        "percentile_05": str(distribution.percentile_05),
+        "expected_shortfall_05": str(distribution.expected_shortfall_05),
+        "best_pnl": str(distribution.best_pnl),
+        "worst_pnl": str(distribution.worst_pnl),
     }
 
 
@@ -275,6 +303,46 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
                 "risk_hurdle": str(directional.risk_hurdle),
                 "edge_after_hurdle": str(directional.edge_after_hurdle),
             },
+        }
+
+    @app.post("/v1/experiments/agents")
+    def compare_agent_distributions(
+        request: AgentExperimentInput,
+    ) -> dict[str, object]:
+        try:
+            result = run_agent_comparison_experiment(
+                EarningsScenario(
+                    initial_price=float(request.initial_spot),
+                    annual_volatility=float(request.annual_volatility),
+                    earnings_jump_volatility=float(request.earnings_jump_volatility),
+                ),
+                strike=request.strike,
+                forecast_option_price=request.forecast_option_price,
+                confidence=request.confidence,
+                scenario_option_volatility=request.scenario_option_volatility,
+                transaction_cost=request.transaction_cost,
+                risk_preset=request.risk_preset,
+                trials=request.trials,
+                base_seed=request.base_seed,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return {
+            "data_status": "synthetic",
+            "paired_paths": True,
+            "trials": result.trials,
+            "base_seed": result.base_seed,
+            "directional_action": result.directional_action.value,
+            "directional_quantity": result.directional_quantity,
+            "market_maker": _distribution_json(result.market_maker),
+            "directional": _distribution_json(result.directional),
+            "mean_directional_minus_maker": str(
+                result.mean_directional_minus_maker
+            ),
+            "probability_directional_outperforms": str(
+                result.probability_directional_outperforms
+            ),
+            "interpretation": "The agents solve different objectives; this paired synthetic experiment is a risk comparison, not a profitability claim.",
         }
 
     @app.post("/v1/sessions", status_code=201)
