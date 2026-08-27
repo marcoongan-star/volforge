@@ -36,6 +36,11 @@ class AgentComparisonExperiment:
     market_maker: AgentDistribution
     directional: AgentDistribution
     mean_directional_minus_maker: Decimal
+    paired_difference_standard_deviation: Decimal
+    paired_difference_standard_error: Decimal
+    paired_mean_ci_95_low: Decimal
+    paired_mean_ci_95_high: Decimal
+    paired_standardized_effect: Decimal
     probability_directional_outperforms: Decimal
 
 
@@ -162,6 +167,19 @@ def run_agent_comparison_experiment(
         directional - maker
         for directional, maker in zip(directional_pnls, maker_pnls, strict=True)
     ]
+    paired_mean = sum(paired_differences, start=Decimal("0")) / Decimal(trials)
+    paired_variance = sum(
+        ((difference - paired_mean) ** 2 for difference in paired_differences),
+        start=Decimal("0"),
+    ) / Decimal(trials - 1)
+    paired_standard_deviation = paired_variance.sqrt()
+    paired_standard_error = paired_standard_deviation / Decimal(trials).sqrt()
+    normal_95_margin = Decimal("1.96") * paired_standard_error
+    standardized_effect = (
+        paired_mean / paired_standard_deviation
+        if paired_standard_deviation != 0
+        else Decimal("0")
+    )
     return AgentComparisonExperiment(
         trials=trials,
         base_seed=base_seed,
@@ -169,9 +187,22 @@ def run_agent_comparison_experiment(
         directional_quantity=directional_plan.quantity,
         market_maker=maker_distribution,
         directional=directional_distribution,
-        mean_directional_minus_maker=(
-            sum(paired_differences, start=Decimal("0")) / Decimal(trials)
-        ).quantize(CENT, rounding=ROUND_HALF_UP),
+        mean_directional_minus_maker=paired_mean.quantize(CENT, rounding=ROUND_HALF_UP),
+        paired_difference_standard_deviation=paired_standard_deviation.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        paired_difference_standard_error=paired_standard_error.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        paired_mean_ci_95_low=(paired_mean - normal_95_margin).quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        paired_mean_ci_95_high=(paired_mean + normal_95_margin).quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        paired_standardized_effect=standardized_effect.quantize(
+            FOUR_PLACES, rounding=ROUND_HALF_UP
+        ),
         probability_directional_outperforms=(
             Decimal(sum(difference > 0 for difference in paired_differences))
             / Decimal(trials)

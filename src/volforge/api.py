@@ -339,6 +339,19 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "mean_directional_minus_maker": str(
                 result.mean_directional_minus_maker
             ),
+            "paired_difference_standard_deviation": str(
+                result.paired_difference_standard_deviation
+            ),
+            "paired_difference_standard_error": str(
+                result.paired_difference_standard_error
+            ),
+            "paired_mean_ci_95": [
+                str(result.paired_mean_ci_95_low),
+                str(result.paired_mean_ci_95_high),
+            ],
+            "paired_standardized_effect": str(
+                result.paired_standardized_effect
+            ),
             "probability_directional_outperforms": str(
                 result.probability_directional_outperforms
             ),
