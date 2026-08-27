@@ -41,6 +41,9 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /500 PAIRED SYNTHETIC PATHS/i);
   assert.match(html, /EXPECTED SHORTFALL/i);
   assert.match(html, /Directional outperformed on 32\.60% of paths/i);
+  assert.match(html, /95% interval/i);
+  assert.match(html, /Paired effect: 0\.0070/i);
+  assert.match(html, /interval crosses zero/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 

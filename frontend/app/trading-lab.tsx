@@ -142,7 +142,7 @@ export function TradingLab() {
           <div className="distribution-row"><strong>Market maker<small>Delta-hedged · alternating customer side</small></strong><b>+$7.43</b><span>49.60%</span><span className="loss">−$459.46</span><span className="loss">−$640.30</span></div>
           <div className="distribution-row"><strong>Directional<small>Buy 5 · 85% confidence input</small></strong><b>+$30.30</b><span>33.00%</span><span className="loss">−$2,090.54</span><span className="loss">−$2,090.54</span></div>
         </div>
-        <div className="paired-note"><strong>PAIRED DIFFERENCE</strong><span>Directional minus maker mean: +$22.88</span><span>Directional outperformed on 32.60% of paths</span><i>Synthetic comparison, not expected live performance</i></div>
+        <div className="paired-note"><strong>PAIRED INFERENCE</strong><span>Mean difference: +$22.88</span><span>95% interval: −$263.08 to +$308.83</span><span>Standard error: $145.90</span><span>Paired effect: 0.0070</span><span>Directional outperformed on 32.60% of paths</span><i>Synthetic comparison, not expected live performance · interval crosses zero</i></div>
       </section>
 
       <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Predict. Hedge. Explain.</h2><p>The market maker earns spread while controlling inventory. The directional agent trades only when a confidence-weighted forecast clears costs and an uncertainty hurdle. The browser explains both; the API owns the tested calculations, accepted orders, fills, hedges, and append-only history.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> Competing agent objectives <b>04</b> WebSocket + cursor recovery <b>05</b> No profit claims</div></section>
