@@ -29,6 +29,9 @@ def test_paired_agent_experiment_is_replayable_and_reports_downside() -> None:
     assert first.market_maker.expected_shortfall_05 <= first.market_maker.percentile_05
     assert first.directional.worst_pnl <= first.directional.percentile_05
     assert Decimal("0") <= first.probability_directional_outperforms <= Decimal("1")
+    assert first.paired_mean_ci_95_low <= first.mean_directional_minus_maker
+    assert first.paired_mean_ci_95_high >= first.mean_directional_minus_maker
+    assert first.paired_difference_standard_error < first.paired_difference_standard_deviation
 
 
 def test_low_confidence_directional_agent_stays_flat_on_every_path() -> None:
@@ -69,4 +72,7 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert payload["trials"] == 100
     assert "expected_shortfall_05" in payload["market_maker"]
     assert "expected_shortfall_05" in payload["directional"]
+    assert len(payload["paired_mean_ci_95"]) == 2
+    assert "paired_difference_standard_error" in payload
+    assert "paired_standardized_effect" in payload
     assert "profitability claim" in payload["interpretation"]
