@@ -4,7 +4,10 @@ from .agents import DirectionalAction, DirectionalPlan, plan_directional_trade
 from .agent_experiments import (
     AgentComparisonExperiment,
     AgentDistribution,
+    AgentSensitivityExperiment,
+    SensitivityCell,
     run_agent_comparison_experiment,
+    run_agent_sensitivity_experiment,
 )
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
@@ -36,6 +39,7 @@ __all__ = [
     "ActionAnalysis",
     "AgentComparisonExperiment",
     "AgentDistribution",
+    "AgentSensitivityExperiment",
     "DecisionReview",
     "DirectionalAction",
     "DirectionalPlan",
@@ -57,6 +61,7 @@ __all__ = [
     "RiskPreset",
     "Side",
     "SessionEvent",
+    "SensitivityCell",
     "SqliteSessionStore",
     "StoredSession",
     "StockTrade",
@@ -75,4 +80,5 @@ __all__ = [
     "score_decision_for_preset",
     "run_long_straddle_experiment",
     "run_agent_comparison_experiment",
+    "run_agent_sensitivity_experiment",
 ]

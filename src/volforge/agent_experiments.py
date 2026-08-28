@@ -44,6 +44,25 @@ class AgentComparisonExperiment:
     probability_directional_outperforms: Decimal
 
 
+@dataclass(frozen=True)
+class SensitivityCell:
+    earnings_jump_volatility: Decimal
+    mean_directional_minus_maker: Decimal
+    paired_mean_ci_95_low: Decimal
+    paired_mean_ci_95_high: Decimal
+    market_maker_expected_shortfall_05: Decimal
+    directional_expected_shortfall_05: Decimal
+    conclusion: str
+
+
+@dataclass(frozen=True)
+class AgentSensitivityExperiment:
+    trials_per_level: int
+    base_seed: int
+    cells: tuple[SensitivityCell, ...]
+    stable_conclusion: bool
+
+
 def _distribution(pnls: list[Decimal]) -> AgentDistribution:
     count = Decimal(len(pnls))
     mean = sum(pnls, start=Decimal("0")) / count
@@ -207,4 +226,71 @@ def run_agent_comparison_experiment(
             Decimal(sum(difference > 0 for difference in paired_differences))
             / Decimal(trials)
         ).quantize(FOUR_PLACES, rounding=ROUND_HALF_UP),
+    )
+
+
+def run_agent_sensitivity_experiment(
+    *,
+    initial_price: Decimal,
+    annual_volatility: Decimal,
+    earnings_jump_volatilities: tuple[Decimal, ...],
+    strike: Decimal,
+    forecast_option_price: Decimal,
+    confidence: Decimal,
+    scenario_option_volatility: Decimal,
+    transaction_cost: Decimal,
+    risk_preset: RiskPreset,
+    trials: int,
+    base_seed: int,
+) -> AgentSensitivityExperiment:
+    """Stress one conclusion across earnings-jump assumptions using common seeds."""
+    if initial_price <= 0 or annual_volatility < 0:
+        raise ValueError("initial price must be positive and annual volatility cannot be negative")
+    if not earnings_jump_volatilities:
+        raise ValueError("at least one earnings jump volatility is required")
+    if len(set(earnings_jump_volatilities)) != len(earnings_jump_volatilities):
+        raise ValueError("earnings jump volatility levels must be unique")
+    if any(level < 0 for level in earnings_jump_volatilities):
+        raise ValueError("earnings jump volatility cannot be negative")
+
+    cells: list[SensitivityCell] = []
+    for level in sorted(earnings_jump_volatilities):
+        result = run_agent_comparison_experiment(
+            EarningsScenario(
+                initial_price=float(initial_price),
+                annual_volatility=float(annual_volatility),
+                earnings_jump_volatility=float(level),
+            ),
+            strike=strike,
+            forecast_option_price=forecast_option_price,
+            confidence=confidence,
+            scenario_option_volatility=scenario_option_volatility,
+            transaction_cost=transaction_cost,
+            risk_preset=risk_preset,
+            trials=trials,
+            base_seed=base_seed,
+        )
+        if result.paired_mean_ci_95_low > 0:
+            conclusion = "directional_advantage"
+        elif result.paired_mean_ci_95_high < 0:
+            conclusion = "market_maker_advantage"
+        else:
+            conclusion = "inconclusive"
+        cells.append(
+            SensitivityCell(
+                earnings_jump_volatility=level.quantize(FOUR_PLACES),
+                mean_directional_minus_maker=result.mean_directional_minus_maker,
+                paired_mean_ci_95_low=result.paired_mean_ci_95_low,
+                paired_mean_ci_95_high=result.paired_mean_ci_95_high,
+                market_maker_expected_shortfall_05=result.market_maker.expected_shortfall_05,
+                directional_expected_shortfall_05=result.directional.expected_shortfall_05,
+                conclusion=conclusion,
+            )
+        )
+    conclusions = {cell.conclusion for cell in cells}
+    return AgentSensitivityExperiment(
+        trials_per_level=trials,
+        base_seed=base_seed,
+        cells=tuple(cells),
+        stable_conclusion=len(conclusions) == 1,
     )
