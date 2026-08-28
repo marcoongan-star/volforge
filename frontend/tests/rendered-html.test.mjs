@@ -44,6 +44,10 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /95% interval/i);
   assert.match(html, /Paired effect: 0\.0070/i);
   assert.match(html, /interval crosses zero/i);
+  assert.match(html, /Does the answer survive volatility/i);
+  assert.match(html, /Conclusion changes/i);
+  assert.match(html, /Maker advantage/i);
+  assert.match(html, /Directional advantage/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 

@@ -143,6 +143,14 @@ export function TradingLab() {
           <div className="distribution-row"><strong>Directional<small>Buy 5 · 85% confidence input</small></strong><b>+$30.30</b><span>33.00%</span><span className="loss">−$2,090.54</span><span className="loss">−$2,090.54</span></div>
         </div>
         <div className="paired-note"><strong>PAIRED INFERENCE</strong><span>Mean difference: +$22.88</span><span>95% interval: −$263.08 to +$308.83</span><span>Standard error: $145.90</span><span>Paired effect: 0.0070</span><span>Directional outperformed on 32.60% of paths</span><i>Synthetic comparison, not expected live performance · interval crosses zero</i></div>
+        <div className="sensitivity-block">
+          <header><div><small>ASSUMPTION STRESS TEST · 500 PAIRED PATHS PER LEVEL</small><h3>Does the answer survive volatility?</h3></div><span>Conclusion changes</span></header>
+          <div className="sensitivity-row sensitivity-labels"><span>EARNINGS JUMP VOL</span><span>MEAN DIFFERENCE</span><span>95% INTERVAL</span><span>MAKER ES · 5%</span><span>DIRECTIONAL ES · 5%</span><span>CONCLUSION</span></div>
+          <div className="sensitivity-row"><strong>4%</strong><b>−$551.82</b><span>−$758.16 to −$345.47</span><span>−$442.77</span><span>−$2,090.54</span><i className="maker-result">Maker advantage</i></div>
+          <div className="sensitivity-row"><strong>8%</strong><b>+$22.88</b><span>−$263.08 to +$308.83</span><span>−$640.30</span><span>−$2,090.54</span><i>Inconclusive</i></div>
+          <div className="sensitivity-row"><strong>12%</strong><b>+$800.65</b><span>+$407.90 to +$1,193.40</span><span>−$962.57</span><span>−$2,090.54</span><i className="directional-result">Directional advantage</i></div>
+          <p>These measured synthetic results reverse across tested assumptions. That instability is the finding: one calibrated scenario is not enough to support a general agent claim.</p>
+        </div>
       </section>
 
       <section className="method" id="method"><span>THE MODEL</span><h2>Quote. Predict. Hedge. Explain.</h2><p>The market maker earns spread while controlling inventory. The directional agent trades only when a confidence-weighted forecast clears costs and an uncertainty hurdle. The browser explains both; the API owns the tested calculations, accepted orders, fills, hedges, and append-only history.</p><div><b>01</b> Synthetic inputs only <b>02</b> Decimal accounting <b>03</b> Competing agent objectives <b>04</b> WebSocket + cursor recovery <b>05</b> No profit claims</div></section>
