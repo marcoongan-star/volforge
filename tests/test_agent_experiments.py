@@ -2,7 +2,12 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
-from volforge import EarningsScenario, RiskPreset, run_agent_comparison_experiment
+from volforge import (
+    EarningsScenario,
+    RiskPreset,
+    run_agent_comparison_experiment,
+    run_agent_sensitivity_experiment,
+)
 from volforge.api import create_app
 
 
@@ -76,3 +81,78 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert "paired_difference_standard_error" in payload
     assert "paired_standardized_effect" in payload
     assert "profitability claim" in payload["interpretation"]
+
+
+def test_volatility_sensitivity_is_replayable_and_classifies_intervals() -> None:
+    request = {
+        "initial_price": Decimal("100"),
+        "annual_volatility": Decimal("0.24"),
+        "earnings_jump_volatilities": (
+            Decimal("0.12"),
+            Decimal("0.04"),
+            Decimal("0.08"),
+        ),
+        **inputs(),
+    }
+
+    first = run_agent_sensitivity_experiment(**request)
+    replay = run_agent_sensitivity_experiment(**request)
+
+    assert first == replay
+    assert [cell.earnings_jump_volatility for cell in first.cells] == [
+        Decimal("0.0400"),
+        Decimal("0.0800"),
+        Decimal("0.1200"),
+    ]
+    for cell in first.cells:
+        expected = (
+            "directional_advantage"
+            if cell.paired_mean_ci_95_low > 0
+            else "market_maker_advantage"
+            if cell.paired_mean_ci_95_high < 0
+            else "inconclusive"
+        )
+        assert cell.conclusion == expected
+    assert first.stable_conclusion is (
+        len({cell.conclusion for cell in first.cells}) == 1
+    )
+
+
+def test_sensitivity_rejects_duplicate_assumptions() -> None:
+    try:
+        run_agent_sensitivity_experiment(
+            initial_price=Decimal("100"),
+            annual_volatility=Decimal("0.24"),
+            earnings_jump_volatilities=(Decimal("0.08"), Decimal("0.08")),
+            **inputs(),
+        )
+    except ValueError as error:
+        assert "unique" in str(error)
+    else:
+        raise AssertionError("duplicate assumptions should be rejected")
+
+
+def test_agent_sensitivity_api_labels_synthetic_common_paths(tmp_path) -> None:
+    client = TestClient(create_app(tmp_path / "volforge.db"))
+    response = client.post(
+        "/v1/experiments/agents/sensitivity",
+        json={
+            "forecast_option_price": "6.00",
+            "confidence": "0.85",
+            "trials": 100,
+            "earnings_jump_volatilities": ["0.04", "0.08", "0.12"],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data_status"] == "synthetic"
+    assert payload["method"] == "paired common-random-number sensitivity grid"
+    assert payload["trials_per_level"] == 100
+    assert len(payload["cells"]) == 3
+    assert all(len(cell["paired_mean_ci_95"]) == 2 for cell in payload["cells"])
+    assert {cell["conclusion"] for cell in payload["cells"]} <= {
+        "directional_advantage",
+        "market_maker_advantage",
+        "inconclusive",
+    }

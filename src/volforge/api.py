@@ -11,7 +11,11 @@ from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnec
 from pydantic import BaseModel, Field
 
 from .agents import plan_directional_trade
-from .agent_experiments import AgentDistribution, run_agent_comparison_experiment
+from .agent_experiments import (
+    AgentDistribution,
+    run_agent_comparison_experiment,
+    run_agent_sensitivity_experiment,
+)
 from .contracts import Side
 from .decisions import (
     ActionAnalysis,
@@ -29,6 +33,7 @@ from .scenario import EarningsScenario
 
 
 PositiveDecimal = Annotated[Decimal, Field(gt=0)]
+NonNegativeDecimal = Annotated[Decimal, Field(ge=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 
 
@@ -102,6 +107,24 @@ class AgentExperimentInput(BaseModel):
     initial_spot: PositiveDecimal = Decimal("100")
     annual_volatility: Decimal = Field(default=Decimal("0.24"), ge=0)
     earnings_jump_volatility: Decimal = Field(default=Decimal("0.08"), ge=0)
+    strike: PositiveDecimal = Decimal("100")
+    forecast_option_price: PositiveDecimal
+    confidence: Decimal = Field(ge=0, le=1)
+    scenario_option_volatility: PositiveDecimal = Decimal("0.50")
+    transaction_cost: Decimal = Field(default=Decimal("0.02"), ge=0)
+    risk_preset: RiskPreset = RiskPreset.BALANCED
+    trials: int = Field(default=500, ge=2, le=5000)
+    base_seed: int = 14000
+
+
+class AgentSensitivityInput(BaseModel):
+    initial_spot: PositiveDecimal = Decimal("100")
+    annual_volatility: Decimal = Field(default=Decimal("0.24"), ge=0)
+    earnings_jump_volatilities: list[NonNegativeDecimal] = Field(
+        default_factory=lambda: [Decimal("0.04"), Decimal("0.08"), Decimal("0.12")],
+        min_length=1,
+        max_length=7,
+    )
     strike: PositiveDecimal = Decimal("100")
     forecast_option_price: PositiveDecimal
     confidence: Decimal = Field(ge=0, le=1)
@@ -356,6 +379,53 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
                 result.probability_directional_outperforms
             ),
             "interpretation": "The agents solve different objectives; this paired synthetic experiment is a risk comparison, not a profitability claim.",
+        }
+
+    @app.post("/v1/experiments/agents/sensitivity")
+    def compare_agent_sensitivity(
+        request: AgentSensitivityInput,
+    ) -> dict[str, object]:
+        try:
+            result = run_agent_sensitivity_experiment(
+                initial_price=request.initial_spot,
+                annual_volatility=request.annual_volatility,
+                earnings_jump_volatilities=tuple(request.earnings_jump_volatilities),
+                strike=request.strike,
+                forecast_option_price=request.forecast_option_price,
+                confidence=request.confidence,
+                scenario_option_volatility=request.scenario_option_volatility,
+                transaction_cost=request.transaction_cost,
+                risk_preset=request.risk_preset,
+                trials=request.trials,
+                base_seed=request.base_seed,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return {
+            "data_status": "synthetic",
+            "method": "paired common-random-number sensitivity grid",
+            "trials_per_level": result.trials_per_level,
+            "base_seed": result.base_seed,
+            "stable_conclusion": result.stable_conclusion,
+            "cells": [
+                {
+                    "earnings_jump_volatility": str(cell.earnings_jump_volatility),
+                    "mean_directional_minus_maker": str(cell.mean_directional_minus_maker),
+                    "paired_mean_ci_95": [
+                        str(cell.paired_mean_ci_95_low),
+                        str(cell.paired_mean_ci_95_high),
+                    ],
+                    "market_maker_expected_shortfall_05": str(
+                        cell.market_maker_expected_shortfall_05
+                    ),
+                    "directional_expected_shortfall_05": str(
+                        cell.directional_expected_shortfall_05
+                    ),
+                    "conclusion": cell.conclusion,
+                }
+                for cell in result.cells
+            ],
+            "interpretation": "A stable label means the statistical conclusion survived only the tested synthetic volatility assumptions; it is not a live-performance claim.",
         }
 
     @app.post("/v1/sessions", status_code=201)
