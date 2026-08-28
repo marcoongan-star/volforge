@@ -27,6 +27,7 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - A responsive React/TypeScript learning lab with pause, step, autoplay, quote-risk controls, delta math, and P&L attribution.
 - Cursor-based event recovery that resumes after the last confirmed sequence without rebuilding or inventing exchange state.
 - WebSocket sequence notifications that direct reconnecting clients back to the durable HTTP recovery path.
+- Common-random-number volatility sensitivity analysis that tests whether a paired agent conclusion is robust to model assumptions.
 
 All example markets are synthetic and explicitly seeded.
 
@@ -75,10 +76,9 @@ Open `http://localhost:3000`. The hosted demonstration uses a clearly labeled sy
 | `tests/` | Executable examples of every current invariant |
 | `docs/` | Short milestone records and data flows |
 
-Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery, [Milestone 10](docs/milestone-10.md) for WebSocket notifications over that recovery layer, [Milestone 11](docs/milestone-11.md) for comparing market-making and directional objectives, [Milestone 12](docs/milestone-12.md) for paired-path distributions and expected shortfall, and [Milestone 13](docs/milestone-13.md) for paired confidence intervals and effect size.
+Start with `tests/test_decisions.py` for the smallest quantitative example. See [Milestone 2](docs/milestone-2.md) for replay, [Milestone 3](docs/milestone-3.md) for the ledger data flow, [Milestone 4](docs/milestone-4.md) for expected value and statistical experiments, [Milestone 5](docs/milestone-5.md) for dual decision benchmarks, [Milestone 6](docs/milestone-6.md) for the hybrid API, [Milestone 7](docs/milestone-7.md) for delta hedging and P&L attribution, [Milestone 8](docs/milestone-8.md) for inventory-aware quoting, [Milestone 9](docs/milestone-9.md) for reconnect-by-sequence recovery, [Milestone 10](docs/milestone-10.md) for WebSocket notifications over that recovery layer, [Milestone 11](docs/milestone-11.md) for comparing market-making and directional objectives, [Milestone 12](docs/milestone-12.md) for paired-path distributions and expected shortfall, [Milestone 13](docs/milestone-13.md) for paired confidence intervals and effect size, and [Milestone 14](docs/milestone-14.md) for common-random-number volatility sensitivity.
 
 ## Next milestones
 
 1. Connect the public replay adapter to a deployed FastAPI session.
-2. Add a volatility-sensitivity grid and compare whether conclusions survive parameter changes.
-3. Connect the public lab to the tested WebSocket and recovery endpoints.
+2. Connect the public lab to the tested WebSocket and recovery endpoints.
