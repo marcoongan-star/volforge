@@ -48,6 +48,10 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /Conclusion changes/i);
   assert.match(html, /Maker advantage/i);
   assert.match(html, /Directional advantage/i);
+  assert.match(html, /Did pairing improve precision/i);
+  assert.match(html, /UNPAIRED SE/i);
+  assert.match(html, /1\.0027×/i);
+  assert.match(html, /0\.27%/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
