@@ -38,6 +38,10 @@ class AgentComparisonExperiment:
     mean_directional_minus_maker: Decimal
     paired_difference_standard_deviation: Decimal
     paired_difference_standard_error: Decimal
+    unpaired_difference_standard_error: Decimal
+    paired_covariance: Decimal
+    paired_correlation: Decimal
+    common_random_number_efficiency: Decimal
     paired_mean_ci_95_low: Decimal
     paired_mean_ci_95_high: Decimal
     paired_standardized_effect: Decimal
@@ -193,6 +197,36 @@ def run_agent_comparison_experiment(
     ) / Decimal(trials - 1)
     paired_standard_deviation = paired_variance.sqrt()
     paired_standard_error = paired_standard_deviation / Decimal(trials).sqrt()
+    maker_mean = sum(maker_pnls, start=Decimal("0")) / Decimal(trials)
+    directional_mean = sum(directional_pnls, start=Decimal("0")) / Decimal(trials)
+    maker_variance = sum(
+        ((pnl - maker_mean) ** 2 for pnl in maker_pnls), start=Decimal("0")
+    ) / Decimal(trials - 1)
+    directional_variance = sum(
+        ((pnl - directional_mean) ** 2 for pnl in directional_pnls),
+        start=Decimal("0"),
+    ) / Decimal(trials - 1)
+    paired_covariance = sum(
+        (
+            (directional - directional_mean) * (maker - maker_mean)
+            for directional, maker in zip(directional_pnls, maker_pnls, strict=True)
+        ),
+        start=Decimal("0"),
+    ) / Decimal(trials - 1)
+    unpaired_standard_error = (
+        (directional_variance + maker_variance) / Decimal(trials)
+    ).sqrt()
+    correlation_denominator = (directional_variance * maker_variance).sqrt()
+    paired_correlation = (
+        paired_covariance / correlation_denominator
+        if correlation_denominator != 0
+        else Decimal("0")
+    )
+    common_random_number_efficiency = (
+        unpaired_standard_error / paired_standard_error
+        if paired_standard_error != 0
+        else Decimal("0")
+    )
     normal_95_margin = Decimal("1.96") * paired_standard_error
     standardized_effect = (
         paired_mean / paired_standard_deviation
@@ -212,6 +246,16 @@ def run_agent_comparison_experiment(
         ),
         paired_difference_standard_error=paired_standard_error.quantize(
             CENT, rounding=ROUND_HALF_UP
+        ),
+        unpaired_difference_standard_error=unpaired_standard_error.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        paired_covariance=paired_covariance.quantize(CENT, rounding=ROUND_HALF_UP),
+        paired_correlation=paired_correlation.quantize(
+            FOUR_PLACES, rounding=ROUND_HALF_UP
+        ),
+        common_random_number_efficiency=common_random_number_efficiency.quantize(
+            FOUR_PLACES, rounding=ROUND_HALF_UP
         ),
         paired_mean_ci_95_low=(paired_mean - normal_95_margin).quantize(
             CENT, rounding=ROUND_HALF_UP

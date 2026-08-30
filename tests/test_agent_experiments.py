@@ -37,6 +37,14 @@ def test_paired_agent_experiment_is_replayable_and_reports_downside() -> None:
     assert first.paired_mean_ci_95_low <= first.mean_directional_minus_maker
     assert first.paired_mean_ci_95_high >= first.mean_directional_minus_maker
     assert first.paired_difference_standard_error < first.paired_difference_standard_deviation
+    assert Decimal("-1") <= first.paired_correlation <= Decimal("1")
+    assert first.unpaired_difference_standard_error > 0
+    assert first.common_random_number_efficiency > 0
+    expected_efficiency = (
+        first.unpaired_difference_standard_error
+        / first.paired_difference_standard_error
+    ).quantize(Decimal("0.0001"))
+    assert abs(first.common_random_number_efficiency - expected_efficiency) <= Decimal("0.0001")
 
 
 def test_low_confidence_directional_agent_stays_flat_on_every_path() -> None:
@@ -80,6 +88,10 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert len(payload["paired_mean_ci_95"]) == 2
     assert "paired_difference_standard_error" in payload
     assert "paired_standardized_effect" in payload
+    assert "unpaired_difference_standard_error" in payload
+    assert "paired_covariance" in payload
+    assert "paired_correlation" in payload
+    assert "common_random_number_efficiency" in payload
     assert "profitability claim" in payload["interpretation"]
 
 

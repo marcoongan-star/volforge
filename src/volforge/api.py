@@ -368,6 +368,14 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "paired_difference_standard_error": str(
                 result.paired_difference_standard_error
             ),
+            "unpaired_difference_standard_error": str(
+                result.unpaired_difference_standard_error
+            ),
+            "paired_covariance": str(result.paired_covariance),
+            "paired_correlation": str(result.paired_correlation),
+            "common_random_number_efficiency": str(
+                result.common_random_number_efficiency
+            ),
             "paired_mean_ci_95": [
                 str(result.paired_mean_ci_95_low),
                 str(result.paired_mean_ci_95_high),
@@ -378,7 +386,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "probability_directional_outperforms": str(
                 result.probability_directional_outperforms
             ),
-            "interpretation": "The agents solve different objectives; this paired synthetic experiment is a risk comparison, not a profitability claim.",
+            "interpretation": "The agents solve different objectives; paired paths expose covariance and may reduce or increase estimation error. This synthetic experiment is a risk comparison, not a profitability claim.",
         }
 
     @app.post("/v1/experiments/agents/sensitivity")
