@@ -6,6 +6,7 @@ from volforge import (
     EarningsScenario,
     RiskPreset,
     plan_experiment_precision,
+    plan_experiment_power,
     run_agent_comparison_experiment,
     run_agent_sensitivity_experiment,
 )
@@ -69,6 +70,47 @@ def test_precision_plan_converts_uncertainty_into_required_paths() -> None:
     assert reached.target_reached is True
 
 
+def test_power_plan_sizes_a_two_sided_paired_experiment() -> None:
+    plan = plan_experiment_power(
+        paired_standard_deviation=Decimal("100"),
+        current_trials=20,
+        target_detectable_difference=Decimal("50"),
+    )
+    larger_effect = plan_experiment_power(
+        paired_standard_deviation=Decimal("100"),
+        current_trials=20,
+        target_detectable_difference=Decimal("80"),
+    )
+
+    assert plan.required_trials == 32
+    assert plan.additional_trials == 12
+    assert Decimal("0.5") < plan.achieved_power < Decimal("0.8")
+    assert plan.target_reached is False
+    assert larger_effect.required_trials < plan.required_trials
+    assert larger_effect.target_reached is True
+
+
+def test_power_plan_rejects_degenerate_or_invalid_assumptions() -> None:
+    for kwargs in (
+        {"paired_standard_deviation": Decimal("0")},
+        {"target_detectable_difference": Decimal("0")},
+        {"significance_level": Decimal("1")},
+        {"target_power": Decimal("0.5")},
+    ):
+        inputs = {
+            "paired_standard_deviation": Decimal("100"),
+            "current_trials": 20,
+            "target_detectable_difference": Decimal("50"),
+            **kwargs,
+        }
+        try:
+            plan_experiment_power(**inputs)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid power assumptions should be rejected")
+
+
 def test_low_confidence_directional_agent_stays_flat_on_every_path() -> None:
     result = run_agent_comparison_experiment(
         EarningsScenario(),
@@ -117,6 +159,9 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert payload["precision_plan"]["required_trials"] >= 2
     assert payload["precision_plan"]["additional_trials"] >= 0
     assert payload["precision_plan"]["target_mean_difference"] == "250.00"
+    assert payload["power_plan"]["target_detectable_difference"] == "500.00"
+    assert payload["power_plan"]["target_power"] == "0.8000"
+    assert payload["power_plan"]["required_trials"] >= 2
     assert "profitability claim" in payload["interpretation"]
 
 

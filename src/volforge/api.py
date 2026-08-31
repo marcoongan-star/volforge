@@ -14,6 +14,7 @@ from .agents import plan_directional_trade
 from .agent_experiments import (
     AgentDistribution,
     plan_experiment_precision,
+    plan_experiment_power,
     run_agent_comparison_experiment,
     run_agent_sensitivity_experiment,
 )
@@ -117,6 +118,8 @@ class AgentExperimentInput(BaseModel):
     trials: int = Field(default=500, ge=2, le=5000)
     base_seed: int = 14000
     target_mean_difference: PositiveDecimal = Decimal("250")
+    target_detectable_difference: PositiveDecimal = Decimal("500")
+    target_power: Decimal = Field(default=Decimal("0.80"), gt=Decimal("0.50"), lt=1)
 
 
 class AgentSensitivityInput(BaseModel):
@@ -357,6 +360,12 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             current_trials=result.trials,
             target_mean_difference=request.target_mean_difference,
         )
+        power = plan_experiment_power(
+            paired_standard_deviation=result.paired_difference_standard_deviation,
+            current_trials=result.trials,
+            target_detectable_difference=request.target_detectable_difference,
+            target_power=request.target_power,
+        )
         return {
             "data_status": "synthetic",
             "paired_paths": True,
@@ -390,6 +399,15 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
                 "required_trials": precision.required_trials,
                 "additional_trials": precision.additional_trials,
                 "target_reached": precision.target_reached,
+            },
+            "power_plan": {
+                "target_detectable_difference": str(power.target_detectable_difference),
+                "significance_level": str(power.significance_level),
+                "target_power": str(power.target_power),
+                "achieved_power": str(power.achieved_power),
+                "required_trials": power.required_trials,
+                "additional_trials": power.additional_trials,
+                "target_reached": power.target_reached,
             },
             "paired_mean_ci_95": [
                 str(result.paired_mean_ci_95_low),
