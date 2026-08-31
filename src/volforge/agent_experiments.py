@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
 from math import ceil
 
 from .agents import DirectionalAction, plan_directional_trade
@@ -65,6 +65,54 @@ class AgentSensitivityExperiment:
     base_seed: int
     cells: tuple[SensitivityCell, ...]
     stable_conclusion: bool
+
+
+@dataclass(frozen=True)
+class ExperimentPrecisionPlan:
+    current_trials: int
+    target_mean_difference: Decimal
+    confidence_multiplier: Decimal
+    current_margin_of_error: Decimal
+    required_trials: int
+    additional_trials: int
+    target_reached: bool
+
+
+def plan_experiment_precision(
+    *,
+    paired_standard_deviation: Decimal,
+    current_trials: int,
+    target_mean_difference: Decimal,
+    confidence_multiplier: Decimal = Decimal("1.96"),
+) -> ExperimentPrecisionPlan:
+    """Estimate paths needed for a 95% CI half-width no larger than the target."""
+    if paired_standard_deviation < 0:
+        raise ValueError("paired standard deviation cannot be negative")
+    if current_trials < 2:
+        raise ValueError("at least two current trials are required")
+    if target_mean_difference <= 0 or confidence_multiplier <= 0:
+        raise ValueError("target difference and confidence multiplier must be positive")
+
+    current_margin = (
+        confidence_multiplier
+        * paired_standard_deviation
+        / Decimal(current_trials).sqrt()
+    )
+    required_decimal = (
+        confidence_multiplier
+        * paired_standard_deviation
+        / target_mean_difference
+    ) ** 2
+    required = max(2, int(required_decimal.to_integral_value(rounding=ROUND_CEILING)))
+    return ExperimentPrecisionPlan(
+        current_trials=current_trials,
+        target_mean_difference=target_mean_difference.quantize(CENT, rounding=ROUND_HALF_UP),
+        confidence_multiplier=confidence_multiplier.quantize(FOUR_PLACES),
+        current_margin_of_error=current_margin.quantize(CENT, rounding=ROUND_HALF_UP),
+        required_trials=required,
+        additional_trials=max(0, required - current_trials),
+        target_reached=current_trials >= required,
+    )
 
 
 def _distribution(pnls: list[Decimal]) -> AgentDistribution:

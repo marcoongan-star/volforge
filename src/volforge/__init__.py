@@ -5,9 +5,11 @@ from .agent_experiments import (
     AgentComparisonExperiment,
     AgentDistribution,
     AgentSensitivityExperiment,
+    ExperimentPrecisionPlan,
     SensitivityCell,
     run_agent_comparison_experiment,
     run_agent_sensitivity_experiment,
+    plan_experiment_precision,
 )
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
@@ -48,6 +50,7 @@ __all__ = [
     "EventLog",
     "EventType",
     "ExperimentResult",
+    "ExperimentPrecisionPlan",
     "Fill",
     "OptionContract",
     "OptionMetrics",
@@ -73,6 +76,7 @@ __all__ = [
     "limits_for",
     "plan_market_maker_quote",
     "plan_directional_trade",
+    "plan_experiment_precision",
     "quote_for_preset",
     "review_decision",
     "risk_aversion_for",

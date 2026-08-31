@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .agents import plan_directional_trade
 from .agent_experiments import (
     AgentDistribution,
+    plan_experiment_precision,
     run_agent_comparison_experiment,
     run_agent_sensitivity_experiment,
 )
@@ -115,6 +116,7 @@ class AgentExperimentInput(BaseModel):
     risk_preset: RiskPreset = RiskPreset.BALANCED
     trials: int = Field(default=500, ge=2, le=5000)
     base_seed: int = 14000
+    target_mean_difference: PositiveDecimal = Decimal("250")
 
 
 class AgentSensitivityInput(BaseModel):
@@ -350,6 +352,11 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             )
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+        precision = plan_experiment_precision(
+            paired_standard_deviation=result.paired_difference_standard_deviation,
+            current_trials=result.trials,
+            target_mean_difference=request.target_mean_difference,
+        )
         return {
             "data_status": "synthetic",
             "paired_paths": True,
@@ -376,6 +383,14 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "common_random_number_efficiency": str(
                 result.common_random_number_efficiency
             ),
+            "precision_plan": {
+                "target_mean_difference": str(precision.target_mean_difference),
+                "confidence_multiplier": str(precision.confidence_multiplier),
+                "current_margin_of_error": str(precision.current_margin_of_error),
+                "required_trials": precision.required_trials,
+                "additional_trials": precision.additional_trials,
+                "target_reached": precision.target_reached,
+            },
             "paired_mean_ci_95": [
                 str(result.paired_mean_ci_95_low),
                 str(result.paired_mean_ci_95_high),

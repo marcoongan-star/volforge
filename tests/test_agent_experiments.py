@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from volforge import (
     EarningsScenario,
     RiskPreset,
+    plan_experiment_precision,
     run_agent_comparison_experiment,
     run_agent_sensitivity_experiment,
 )
@@ -45,6 +46,27 @@ def test_paired_agent_experiment_is_replayable_and_reports_downside() -> None:
         / first.paired_difference_standard_error
     ).quantize(Decimal("0.0001"))
     assert abs(first.common_random_number_efficiency - expected_efficiency) <= Decimal("0.0001")
+
+
+def test_precision_plan_converts_uncertainty_into_required_paths() -> None:
+    plan = plan_experiment_precision(
+        paired_standard_deviation=Decimal("100"),
+        current_trials=100,
+        target_mean_difference=Decimal("10"),
+    )
+    reached = plan_experiment_precision(
+        paired_standard_deviation=Decimal("100"),
+        current_trials=100,
+        target_mean_difference=Decimal("20"),
+    )
+
+    assert plan.current_margin_of_error == Decimal("19.60")
+    assert plan.required_trials == 385
+    assert plan.additional_trials == 285
+    assert plan.target_reached is False
+    assert reached.required_trials == 97
+    assert reached.additional_trials == 0
+    assert reached.target_reached is True
 
 
 def test_low_confidence_directional_agent_stays_flat_on_every_path() -> None:
@@ -92,6 +114,9 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert "paired_covariance" in payload
     assert "paired_correlation" in payload
     assert "common_random_number_efficiency" in payload
+    assert payload["precision_plan"]["required_trials"] >= 2
+    assert payload["precision_plan"]["additional_trials"] >= 0
+    assert payload["precision_plan"]["target_mean_difference"] == "250.00"
     assert "profitability claim" in payload["interpretation"]
 
 
