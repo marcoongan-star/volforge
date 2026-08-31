@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
-from math import ceil
+from math import ceil, sqrt
+from statistics import NormalDist
 
 from .agents import DirectionalAction, plan_directional_trade
 from .contracts import OptionType
@@ -76,6 +77,73 @@ class ExperimentPrecisionPlan:
     required_trials: int
     additional_trials: int
     target_reached: bool
+
+
+@dataclass(frozen=True)
+class ExperimentPowerPlan:
+    current_trials: int
+    target_detectable_difference: Decimal
+    significance_level: Decimal
+    target_power: Decimal
+    achieved_power: Decimal
+    required_trials: int
+    additional_trials: int
+    target_reached: bool
+
+
+def plan_experiment_power(
+    *,
+    paired_standard_deviation: Decimal,
+    current_trials: int,
+    target_detectable_difference: Decimal,
+    significance_level: Decimal = Decimal("0.05"),
+    target_power: Decimal = Decimal("0.80"),
+) -> ExperimentPowerPlan:
+    """Plan a two-sided paired normal-approximation test before more paths run."""
+    if paired_standard_deviation <= 0:
+        raise ValueError("paired standard deviation must be positive")
+    if current_trials < 2:
+        raise ValueError("at least two current trials are required")
+    if target_detectable_difference <= 0:
+        raise ValueError("target detectable difference must be positive")
+    if not Decimal("0") < significance_level < Decimal("1"):
+        raise ValueError("significance level must be between zero and one")
+    if not Decimal("0.5") < target_power < Decimal("1"):
+        raise ValueError("target power must be between 0.5 and one")
+
+    normal = NormalDist()
+    alpha = float(significance_level)
+    desired_power = float(target_power)
+    standard_deviation = float(paired_standard_deviation)
+    detectable_difference = float(target_detectable_difference)
+    critical_value = normal.inv_cdf(1 - alpha / 2)
+    power_value = normal.inv_cdf(desired_power)
+    required = max(
+        2,
+        ceil(
+            ((critical_value + power_value) * standard_deviation / detectable_difference)
+            ** 2
+        ),
+    )
+    noncentral_shift = sqrt(current_trials) * detectable_difference / standard_deviation
+    achieved = normal.cdf(noncentral_shift - critical_value) + normal.cdf(
+        -noncentral_shift - critical_value
+    )
+    achieved_decimal = Decimal(str(achieved)).quantize(
+        FOUR_PLACES, rounding=ROUND_HALF_UP
+    )
+    return ExperimentPowerPlan(
+        current_trials=current_trials,
+        target_detectable_difference=target_detectable_difference.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        significance_level=significance_level.quantize(FOUR_PLACES),
+        target_power=target_power.quantize(FOUR_PLACES),
+        achieved_power=achieved_decimal,
+        required_trials=required,
+        additional_trials=max(0, required - current_trials),
+        target_reached=achieved_decimal >= target_power,
+    )
 
 
 def plan_experiment_precision(
