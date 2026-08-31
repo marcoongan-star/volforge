@@ -52,6 +52,10 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /UNPAIRED SE/i);
   assert.match(html, /1\.0027×/i);
   assert.match(html, /0\.27%/i);
+  assert.match(html, /How many paths are enough/i);
+  assert.match(html, /CURRENT MARGIN/i);
+  assert.match(html, /655/);
+  assert.match(html, /ADDITIONAL/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
