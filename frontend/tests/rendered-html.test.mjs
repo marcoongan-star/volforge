@@ -52,6 +52,12 @@ test("server-renders the VolForge learning lab", async () => {
   assert.match(html, /UNPAIRED SE/i);
   assert.match(html, /1\.0027×/i);
   assert.match(html, /0\.27%/i);
+  assert.match(html, /Exact sign test/i);
+  assert.match(html, /Frequency and average can disagree/i);
+  assert.match(html, /163/);
+  assert.match(html, /337/);
+  assert.match(html, /p-value below 0\.0001/i);
+  assert.match(html, /typical path/i);
   assert.match(html, /How many paths are enough/i);
   assert.match(html, /CURRENT MARGIN/i);
   assert.match(html, /655/);
