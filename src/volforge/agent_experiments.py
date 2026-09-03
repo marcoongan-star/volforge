@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
-from math import ceil, sqrt
+from math import ceil, comb, sqrt
 from statistics import NormalDist
 
 from .agents import DirectionalAction, plan_directional_trade
@@ -47,6 +47,10 @@ class AgentComparisonExperiment:
     paired_mean_ci_95_high: Decimal
     paired_standardized_effect: Decimal
     probability_directional_outperforms: Decimal
+    nonzero_paired_trials: int
+    directional_outperformance_count: int
+    exact_sign_test_p_value: Decimal
+    exact_sign_test_significant_05: bool
 
 
 @dataclass(frozen=True)
@@ -210,6 +214,17 @@ def _distribution(pnls: list[Decimal]) -> AgentDistribution:
     )
 
 
+def _two_sided_sign_test_p_value(wins: int, losses: int) -> Decimal:
+    """Return the exact two-sided binomial sign-test p-value, excluding ties."""
+    nonzero = wins + losses
+    if nonzero == 0:
+        return Decimal("1")
+    tail = min(wins, losses)
+    numerator = 2 * sum(comb(nonzero, count) for count in range(tail + 1))
+    probability = Decimal(numerator) / Decimal(2**nonzero)
+    return min(Decimal("1"), probability)
+
+
 def run_agent_comparison_experiment(
     scenario: EarningsScenario,
     *,
@@ -349,6 +364,9 @@ def run_agent_comparison_experiment(
         if paired_standard_deviation != 0
         else Decimal("0")
     )
+    directional_wins = sum(difference > 0 for difference in paired_differences)
+    maker_wins = sum(difference < 0 for difference in paired_differences)
+    sign_test_p_value = _two_sided_sign_test_p_value(directional_wins, maker_wins)
     return AgentComparisonExperiment(
         trials=trials,
         base_seed=base_seed,
@@ -383,9 +401,13 @@ def run_agent_comparison_experiment(
             FOUR_PLACES, rounding=ROUND_HALF_UP
         ),
         probability_directional_outperforms=(
-            Decimal(sum(difference > 0 for difference in paired_differences))
+            Decimal(directional_wins)
             / Decimal(trials)
         ).quantize(FOUR_PLACES, rounding=ROUND_HALF_UP),
+        nonzero_paired_trials=directional_wins + maker_wins,
+        directional_outperformance_count=directional_wins,
+        exact_sign_test_p_value=sign_test_p_value,
+        exact_sign_test_significant_05=sign_test_p_value <= Decimal("0.05"),
     )
 
 

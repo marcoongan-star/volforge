@@ -419,7 +419,14 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "probability_directional_outperforms": str(
                 result.probability_directional_outperforms
             ),
-            "interpretation": "The agents solve different objectives; paired paths expose covariance and may reduce or increase estimation error. This synthetic experiment is a risk comparison, not a profitability claim.",
+            "exact_sign_test": {
+                "nonzero_pairs": result.nonzero_paired_trials,
+                "directional_wins": result.directional_outperformance_count,
+                "two_sided_p_value": str(result.exact_sign_test_p_value),
+                "significant_at_05": result.exact_sign_test_significant_05,
+                "null_hypothesis": "Each agent is equally likely to outperform on a non-tied paired path.",
+            },
+            "interpretation": "The mean interval and exact sign test answer different questions: average P&L difference versus path-by-path win frequency. The agents solve different objectives; this is a synthetic risk comparison, not a profitability claim.",
         }
 
     @app.post("/v1/experiments/agents/sensitivity")

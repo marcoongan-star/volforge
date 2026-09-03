@@ -42,6 +42,12 @@ def test_paired_agent_experiment_is_replayable_and_reports_downside() -> None:
     assert Decimal("-1") <= first.paired_correlation <= Decimal("1")
     assert first.unpaired_difference_standard_error > 0
     assert first.common_random_number_efficiency > 0
+    assert first.nonzero_paired_trials <= first.trials
+    assert first.directional_outperformance_count <= first.nonzero_paired_trials
+    assert Decimal("0") <= first.exact_sign_test_p_value <= Decimal("1")
+    assert first.exact_sign_test_significant_05 is (
+        first.exact_sign_test_p_value <= Decimal("0.05")
+    )
     expected_efficiency = (
         first.unpaired_difference_standard_error
         / first.paired_difference_standard_error
@@ -156,6 +162,10 @@ def test_agent_experiment_api_labels_paired_synthetic_paths(tmp_path) -> None:
     assert "paired_covariance" in payload
     assert "paired_correlation" in payload
     assert "common_random_number_efficiency" in payload
+    assert payload["exact_sign_test"]["nonzero_pairs"] <= payload["trials"]
+    assert payload["exact_sign_test"]["directional_wins"] <= payload["exact_sign_test"]["nonzero_pairs"]
+    assert 0 <= float(payload["exact_sign_test"]["two_sided_p_value"]) <= 1
+    assert "equally likely" in payload["exact_sign_test"]["null_hypothesis"]
     assert payload["precision_plan"]["required_trials"] >= 2
     assert payload["precision_plan"]["additional_trials"] >= 0
     assert payload["precision_plan"]["target_mean_difference"] == "250.00"
