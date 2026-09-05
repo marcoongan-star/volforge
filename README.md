@@ -30,6 +30,7 @@ VolForge is designed for quantitative-trading interviews: it combines option pri
 - Common-random-number volatility sensitivity analysis that tests whether a paired agent conclusion is robust to model assumptions.
 - An empirical variance-reduction diagnostic with covariance, correlation, paired versus unpaired standard error, and simulation-efficiency reconciliation.
 - An exact paired sign test that separates typical-path win frequency from average-dollar inference.
+- Deterministic bootstrap intervals that show sampling uncertainty around 5% expected shortfall.
 
 All example markets are synthetic and explicitly seeded.
 
