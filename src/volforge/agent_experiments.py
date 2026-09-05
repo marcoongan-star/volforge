@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
 from math import ceil, comb, sqrt
+from random import Random
 from statistics import NormalDist
 
 from .agents import DirectionalAction, plan_directional_trade
@@ -24,6 +25,8 @@ class AgentDistribution:
     probability_of_profit: Decimal
     percentile_05: Decimal
     expected_shortfall_05: Decimal
+    expected_shortfall_05_ci_95_low: Decimal
+    expected_shortfall_05_ci_95_high: Decimal
     best_pnl: Decimal
     worst_pnl: Decimal
 
@@ -187,7 +190,33 @@ def plan_experiment_precision(
     )
 
 
-def _distribution(pnls: list[Decimal]) -> AgentDistribution:
+def _expected_shortfall_05(pnls: list[Decimal]) -> Decimal:
+    sorted_pnls = sorted(pnls)
+    tail_count = max(1, ceil(len(sorted_pnls) * 0.05))
+    return sum(sorted_pnls[:tail_count], start=Decimal("0")) / Decimal(tail_count)
+
+
+def _bootstrap_expected_shortfall_interval(
+    pnls: list[Decimal],
+    *,
+    seed: int,
+    resamples: int = 400,
+) -> tuple[Decimal, Decimal]:
+    """Percentile bootstrap interval for the sampled 5% expected shortfall."""
+    if resamples < 40:
+        raise ValueError("at least 40 bootstrap resamples are required")
+    random = Random(seed)
+    count = len(pnls)
+    estimates = sorted(
+        _expected_shortfall_05([pnls[random.randrange(count)] for _ in range(count)])
+        for _ in range(resamples)
+    )
+    low_index = int((resamples - 1) * 0.025)
+    high_index = int((resamples - 1) * 0.975)
+    return estimates[low_index], estimates[high_index]
+
+
+def _distribution(pnls: list[Decimal], *, bootstrap_seed: int) -> AgentDistribution:
     count = Decimal(len(pnls))
     mean = sum(pnls, start=Decimal("0")) / count
     sample_variance = sum(
@@ -195,9 +224,9 @@ def _distribution(pnls: list[Decimal]) -> AgentDistribution:
     ) / (count - Decimal("1"))
     sorted_pnls = sorted(pnls)
     percentile_index = int((len(sorted_pnls) - 1) * 0.05)
-    tail_count = max(1, ceil(len(sorted_pnls) * 0.05))
-    expected_shortfall = sum(sorted_pnls[:tail_count], start=Decimal("0")) / Decimal(
-        tail_count
+    expected_shortfall = _expected_shortfall_05(pnls)
+    expected_shortfall_ci_low, expected_shortfall_ci_high = (
+        _bootstrap_expected_shortfall_interval(pnls, seed=bootstrap_seed)
     )
     return AgentDistribution(
         mean_pnl=mean.quantize(CENT, rounding=ROUND_HALF_UP),
@@ -209,6 +238,12 @@ def _distribution(pnls: list[Decimal]) -> AgentDistribution:
         ).quantize(FOUR_PLACES, rounding=ROUND_HALF_UP),
         percentile_05=sorted_pnls[percentile_index],
         expected_shortfall_05=expected_shortfall.quantize(CENT, rounding=ROUND_HALF_UP),
+        expected_shortfall_05_ci_95_low=expected_shortfall_ci_low.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
+        expected_shortfall_05_ci_95_high=expected_shortfall_ci_high.quantize(
+            CENT, rounding=ROUND_HALF_UP
+        ),
         best_pnl=max(pnls),
         worst_pnl=min(pnls),
     )
@@ -315,8 +350,12 @@ def run_agent_comparison_experiment(
             directional_pnl = Decimal("0")
         directional_pnls.append(directional_pnl.quantize(CENT, rounding=ROUND_HALF_UP))
 
-    maker_distribution = _distribution(maker_pnls)
-    directional_distribution = _distribution(directional_pnls)
+    maker_distribution = _distribution(
+        maker_pnls, bootstrap_seed=base_seed ^ 0x4D414B45
+    )
+    directional_distribution = _distribution(
+        directional_pnls, bootstrap_seed=base_seed ^ 0x44495245
+    )
     paired_differences = [
         directional - maker
         for directional, maker in zip(directional_pnls, maker_pnls, strict=True)

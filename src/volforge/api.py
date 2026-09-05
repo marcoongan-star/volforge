@@ -161,6 +161,10 @@ def _distribution_json(distribution: AgentDistribution) -> dict[str, str]:
         "probability_of_profit": str(distribution.probability_of_profit),
         "percentile_05": str(distribution.percentile_05),
         "expected_shortfall_05": str(distribution.expected_shortfall_05),
+        "expected_shortfall_05_ci_95": [
+            str(distribution.expected_shortfall_05_ci_95_low),
+            str(distribution.expected_shortfall_05_ci_95_high),
+        ],
         "best_pnl": str(distribution.best_pnl),
         "worst_pnl": str(distribution.worst_pnl),
     }
