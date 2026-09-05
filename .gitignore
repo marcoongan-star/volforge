@@ -7,3 +7,8 @@ dist/
 build/
 *.egg-info/
 *.db
+frontend/.next/
+frontend/.vinext/
+frontend/.wrangler/
+frontend/dist/
+frontend/node_modules/

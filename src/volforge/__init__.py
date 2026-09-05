@@ -1,5 +1,18 @@
 """VolForge quantitative exchange core."""
 
+from .agents import DirectionalAction, DirectionalPlan, plan_directional_trade
+from .agent_experiments import (
+    AgentComparisonExperiment,
+    AgentDistribution,
+    AgentSensitivityExperiment,
+    ExperimentPrecisionPlan,
+    ExperimentPowerPlan,
+    SensitivityCell,
+    run_agent_comparison_experiment,
+    run_agent_sensitivity_experiment,
+    plan_experiment_precision,
+    plan_experiment_power,
+)
 from .contracts import Fill, OptionContract, OptionType, Order, Side
 from .decisions import (
     ActionAnalysis,
@@ -28,12 +41,19 @@ __all__ = [
     "EarningsScenario",
     "EarningsOutcome",
     "ActionAnalysis",
+    "AgentComparisonExperiment",
+    "AgentDistribution",
+    "AgentSensitivityExperiment",
     "DecisionReview",
+    "DirectionalAction",
+    "DirectionalPlan",
     "DecisionScorecard",
     "AccountSnapshot",
     "EventLog",
     "EventType",
     "ExperimentResult",
+    "ExperimentPrecisionPlan",
+    "ExperimentPowerPlan",
     "Fill",
     "OptionContract",
     "OptionMetrics",
@@ -47,6 +67,7 @@ __all__ = [
     "RiskPreset",
     "Side",
     "SessionEvent",
+    "SensitivityCell",
     "SqliteSessionStore",
     "StoredSession",
     "StockTrade",
@@ -57,10 +78,15 @@ __all__ = [
     "black_scholes",
     "limits_for",
     "plan_market_maker_quote",
+    "plan_directional_trade",
+    "plan_experiment_precision",
+    "plan_experiment_power",
     "quote_for_preset",
     "review_decision",
     "risk_aversion_for",
     "score_decision",
     "score_decision_for_preset",
     "run_long_straddle_experiment",
+    "run_agent_comparison_experiment",
+    "run_agent_sensitivity_experiment",
 ]
